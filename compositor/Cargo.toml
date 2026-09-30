@@ -1,0 +1,44 @@
+[package]
+name = "lunanano-compositor"
+version = "0.1.0"
+edition = "2021"
+description = "LunaNano Wayland compositor (wlroots) with WebSocket IPC for the React shell"
+license = "MIT"
+
+[[bin]]
+name = "lunanano-compositor"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+base64 = "0.22"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+portable-pty = "0.8"
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "net", "io-util", "time", "sync"] }
+tokio-tungstenite = "0.21"
+futures-util = "0.3"
+clap = { version = "4", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+libc = "0.2"
+rand = "0.8"
+
+# Real wlroots backend — enabled in CI where libwlroots-dev is available:
+#   cargo build --features wlroots-backend
+[features]
+default = []
+wlroots-backend = ["dep:wayland-server", "dep:smithay-client-toolkit"]
+headless-backend = []
+
+[dependencies.wayland-server]
+version = "0.31"
+optional = true
+
+[dependencies.smithay-client-toolkit]
+version = "0.18"
+optional = true
+
+[profile.release]
+opt-level = 2
+lto = false
