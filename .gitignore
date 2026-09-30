@@ -1,8 +1,1 @@
-target/
-node_modules/
-dist/
-*.deb
-.debhelper/
-shell/src-tauri/target/
-greeter/dist/
-shell/dist/
+(empty)

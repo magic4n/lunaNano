@@ -1,0 +1,1 @@
+/workspace/compositor/target/debug/lunanano-compositor: /workspace/compositor/src/appinfo.rs /workspace/compositor/src/backend/mod.rs /workspace/compositor/src/ipc.rs /workspace/compositor/src/main.rs /workspace/compositor/src/pty.rs /workspace/compositor/src/rpc.rs /workspace/compositor/src/session.rs /workspace/compositor/src/settings.rs /workspace/compositor/src/toplevel.rs
