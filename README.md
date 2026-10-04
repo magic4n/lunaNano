@@ -19,6 +19,9 @@
 
 <p align="center">
   <strong>English</strong> | <a href="README_RU.md">Русский</a>
+
+PLEASE INSTALL IT ONLY IN VM.
+IT'S NIGHTLY!
 </p>
 
 ---
