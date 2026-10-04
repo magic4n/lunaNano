@@ -1,4 +1,4 @@
-name: CI/CD Build & Package
+name: CI/CD Multi-Format Release Build
 
 on:
   push:
@@ -6,10 +6,57 @@ on:
       - main
     tags:
       - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-  build-and-package:
+  build-frontend:
+    name: Build React Shell Bundle
     runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: Typecheck TypeScript
+        run: npx tsc --noEmit
+
+      - name: Build Web Bundle
+        run: npm run build
+
+      - name: Upload Dist Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lunanano-frontend-dist
+          path: dist/
+          retention-days: 1
+
+  build-packages:
+    name: Build Packages (${{ matrix.arch }} - ${{ matrix.target }})
+    needs: build-frontend
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            target: x86_64-unknown-linux-gnu
+            os: ubuntu-24.04
+            rpm_arch: x86_64
+          - arch: arm64
+            target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+            rpm_arch: aarch64
 
     steps:
       - name: Checkout repository
@@ -18,13 +65,13 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-unknown-linux-gnu
+          targets: ${{ matrix.target }}
 
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
+      - name: Download Frontend Dist
+        uses: actions/download-artifact@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          name: lunanano-frontend-dist
+          path: dist/
 
       - name: Install System Dependencies
         run: |
@@ -50,34 +97,76 @@ jobs:
             file \
             libssl-dev \
             dpkg-dev \
-            patchelf \
+            rpm \
+            tar \
+            gzip \
             xwayland
 
-      - name: Install Frontend Dependencies
-        run: npm ci
-
-      - name: Build React Shell Bundle
-        run: npm run build
-
       - name: Build Wayland Compositor (Release)
-        run: cargo build --release -p lunanano-compositor
+        run: cargo build --release -p lunanano-compositor --target ${{ matrix.target }}
 
-      - name: Package Debian (.deb)
+      - name: Prepare Binaries
         run: |
-          chmod +x packaging/build-deb.sh packaging/lunanano-session
-          ./packaging/build-deb.sh
+          mkdir -p target/release
+          cp target/${{ matrix.target }}/release/lunanano-compositor target/release/ 2>/dev/null || true
 
-      - name: Upload Debian Package Artifact
+      - name: Build Debian Package (.deb)
+        run: |
+          chmod +x packaging/*.sh packaging/lunanano-session packaging/lunanano-standalone-runner
+          TARGET_ARCH="${{ matrix.arch }}" ./packaging/build-deb.sh
+
+      - name: Build Standalone Generic Tarball (.tar.gz)
+        run: |
+          TARGET_ARCH="${{ matrix.arch }}" ./packaging/build-tarball.sh
+
+      - name: Build RedHat / Fedora Package (.rpm)
+        run: |
+          TARGET_ARCH="${{ matrix.rpm_arch }}" ./packaging/build-rpm.sh
+
+      - name: Generate Checksums
+        run: |
+          cd artifacts
+          for f in *; do
+            if [ -f "$f" ] && [[ "$f" != *.sha256 ]]; then
+              sha256sum "$f" > "$f.sha256"
+            fi
+          done
+
+      - name: Upload Artifacts (${{ matrix.arch }})
         uses: actions/upload-artifact@v4
         with:
-          name: lunanano-deb
-          path: artifacts/*.deb
+          name: lunanano-${{ matrix.arch }}-packages
+          path: artifacts/*
+          retention-days: 14
 
-      - name: Create GitHub Release and Attach .deb
-        if: startsWith(github.ref, 'refs/tags/v')
+  release:
+    name: GitHub Release & Distribution
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build-packages
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all built packages
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          pattern: lunanano-*-packages
+          merge-multiple: true
+
+      - name: Generate Consolidated SHA256SUMS
+        run: |
+          cd release-artifacts
+          rm -f *.sha256
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*.deb
+          files: |
+            release-artifacts/*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

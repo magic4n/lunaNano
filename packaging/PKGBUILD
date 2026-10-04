@@ -1,0 +1,37 @@
+# Maintainer: superLuna Ecosystem <dev@superluna.local>
+pkgname=lunanano-bin
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Ultra-lightweight aesthetic Wayland Desktop Shell built with React & Material You 3"
+arch=('x86_64' 'aarch64')
+url="https://github.com/superluna/lunaNano"
+license=('GPL-3.0-or-later')
+depends=(
+    'pipewire'
+    'wireplumber'
+    'brightnessctl'
+    'networkmanager'
+    'bluez'
+    'power-profiles-daemon'
+    'wl-clipboard'
+    'grim'
+    'slurp'
+    'xorg-xwayland'
+    'webkit2gtk-4.1'
+)
+optdepends=(
+    'greetd: Minimal login daemon support'
+    'mako: Notification daemon'
+    'wf-recorder: Screen video recording'
+)
+provides=('lunanano')
+conflicts=('lunanano')
+source_x86_64=("https://github.com/superluna/lunaNano/releases/download/v${pkgver}/lunanano-${pkgver}-linux-x86_64.tar.gz")
+source_aarch64=("https://github.com/superluna/lunaNano/releases/download/v${pkgver}/lunanano-${pkgver}-linux-aarch64.tar.gz")
+sha256sums_x86_64=('SKIP')
+sha256sums_aarch64=('SKIP')
+
+package() {
+    cd "${srcdir}/lunanano-${pkgver}-${CARCH}"
+    DESTDIR="${pkgdir}" PREFIX="/usr" ./install.sh
+}
