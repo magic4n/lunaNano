@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWindowStore, AppWindow } from '../../stores/windowStore';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { playClickSound, playMinimizeSound, playSnapSound } from '../../theme/sounds';
 
 interface WindowFrameProps {
   window: AppWindow;
@@ -89,6 +90,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({ window: win, children 
 
     const handleMouseUp = () => {
       if (isDragging && snapPreview) {
+        playSnapSound();
         snapWindow(win.id, snapPreview);
       }
       setIsDragging(false);
@@ -218,7 +220,10 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({ window: win, children 
           <div className="flex items-center gap-1.5 window-control-btn">
             {/* Minimize */}
             <button
-              onClick={() => minimizeWindow(win.id)}
+              onClick={() => {
+                playMinimizeSound();
+                minimizeWindow(win.id);
+              }}
               title="Minimize"
               className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-[var(--md-sys-color-outline-variant)]/30 active:scale-95 transition-all text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]"
             >
@@ -227,7 +232,10 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({ window: win, children 
 
             {/* Maximize / Restore */}
             <button
-              onClick={() => toggleMaximizeWindow(win.id)}
+              onClick={() => {
+                playClickSound();
+                toggleMaximizeWindow(win.id);
+              }}
               title={win.isMaximized ? 'Restore' : 'Maximize'}
               className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-[var(--md-sys-color-outline-variant)]/30 active:scale-95 transition-all text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]"
             >
@@ -238,7 +246,10 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({ window: win, children 
 
             {/* Close */}
             <button
-              onClick={() => closeWindow(win.id)}
+              onClick={() => {
+                playClickSound();
+                closeWindow(win.id);
+              }}
               title="Close"
               className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-[var(--md-sys-color-error)] hover:text-[var(--md-sys-color-on-error)] active:scale-95 transition-all text-[var(--md-sys-color-on-surface-variant)]"
             >

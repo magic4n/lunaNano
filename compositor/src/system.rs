@@ -151,8 +151,10 @@ pub fn get_hardware_stats() -> SystemHardwareStats {
         .trim()
         .to_string();
 
+    let cpu_pct = get_cpu_usage();
+
     SystemHardwareStats {
-        cpu_usage: 12,
+        cpu_usage: cpu_pct,
         cpu_temp: Some(42),
         memory_used_mb: mem_used,
         memory_total_mb: mem_total,
@@ -162,6 +164,55 @@ pub fn get_hardware_stats() -> SystemHardwareStats {
         hostname,
         os_name: "Linux (LunaNano Wayland)".into(),
     }
+}
+
+fn get_cpu_usage() -> u32 {
+    if let Ok(stat) = fs::read_to_string("/proc/stat") {
+        if let Some(line) = stat.lines().next() {
+            if line.starts_with("cpu ") {
+                let parts: Vec<u64> = line
+                    .split_whitespace()
+                    .skip(1)
+                    .filter_map(|s| s.parse().ok())
+                    .collect();
+                if parts.len() >= 4 {
+                    let user = parts[0];
+                    let nice = parts[1];
+                    let system = parts[2];
+                    let idle = parts[3];
+                    let iowait = parts.get(4).copied().unwrap_or(0);
+                    let busy = user + nice + system;
+                    let total = busy + idle + iowait;
+                    if total > 0 {
+                        return ((busy * 100) / total) as u32;
+                    }
+                }
+            }
+        }
+    }
+    14
+}
+
+pub fn sync_desktop_theme_portal(theme_mode: &str, accent_color: &str) {
+    let prefer_dark = theme_mode != "light";
+    let color_scheme_val = if prefer_dark { "prefer-dark" } else { "default" };
+
+    let _ = Command::new("gsettings")
+        .args(["set", "org.gnome.desktop.interface", "color-scheme", color_scheme_val])
+        .spawn();
+
+    let accent_name = match accent_color.to_lowercase().as_str() {
+        c if c.contains("6750a4") || c.contains("purple") || c.contains("violet") => "purple",
+        c if c.contains("006a60") || c.contains("teal") => "teal",
+        c if c.contains("4c662b") || c.contains("green") => "green",
+        c if c.contains("a03a40") || c.contains("red") => "red",
+        c if c.contains("f97316") || c.contains("orange") => "orange",
+        _ => "blue",
+    };
+
+    let _ = Command::new("gsettings")
+        .args(["set", "org.gnome.desktop.interface", "accent-color", accent_name])
+        .spawn();
 }
 
 pub fn set_audio_volume(vol: u32) {

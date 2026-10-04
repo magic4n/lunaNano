@@ -5,6 +5,7 @@ import { useIpcStore } from '../../stores/ipcStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { DockContextMenu, DockContextMenuItem } from './DockContextMenu';
 import { QuickSettingsPanel } from './QuickSettingsPanel';
+import { playClickSound } from '../../theme/sounds';
 
 interface DockItemProps {
   appId: string;
@@ -54,6 +55,7 @@ const DockCapsuleItem: React.FC<DockItemProps> = ({
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    playClickSound();
     if (appWindows.length === 0) {
       if (appId === 'chromium') {
         send({ type: 'apps:launch', exec: 'chromium --enable-features=UseOzonePlatform --ozone-platform=wayland' });
@@ -246,17 +248,38 @@ export const Dock: React.FC = () => {
     }
   };
 
+  const [isHovered, setIsHovered] = useState(false);
+  const autoHide = settings.dock.autoHide;
+  const isHidden = autoHide && !isHovered && !isLauncherOpen && !showQuickSettings;
+
   return (
     <>
+      {/* Auto-hide mouse trigger strip */}
+      {autoHide && (
+        <div
+          onMouseEnter={() => setIsHovered(true)}
+          className="fixed bottom-0 left-0 right-0 h-3 z-30 pointer-events-auto"
+        />
+      )}
+
       <div
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => {
+          setIsHovered(false);
+          mouseX.set(Infinity);
+        }}
         onMouseMove={(e) => mouseX.set(e.pageX)}
-        onMouseLeave={() => mouseX.set(Infinity)}
-        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 select-none"
+        className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 select-none transition-transform duration-300 ease-out ${
+          isHidden ? 'translate-y-[calc(100%+24px)] pointer-events-none' : 'translate-y-0'
+        }`}
       >
         {/* Capsule 1: Launcher Capsule (100% rounded pill) */}
         <motion.div
           whileTap={{ scale: 0.92 }}
-          onClick={() => toggleLauncher()}
+          onClick={() => {
+            playClickSound();
+            toggleLauncher();
+          }}
           title="App Launcher (Super)"
           className={`h-15 w-15 px-4 rounded-full flex items-center justify-center cursor-pointer shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-2xl border border-[var(--md-sys-color-outline-variant)]/30 transition-all duration-300 ${
             isLauncherOpen
@@ -288,7 +311,10 @@ export const Dock: React.FC = () => {
 
         {/* Capsule 3: Media Player Capsule (100% rounded pill) */}
         <div
-          onClick={() => setIsPlayingMedia(!isPlayingMedia)}
+          onClick={() => {
+            playClickSound();
+            setIsPlayingMedia(!isPlayingMedia);
+          }}
           className="h-15 px-4 rounded-full bg-[var(--md-sys-color-surface-container)]/90 text-[var(--md-sys-color-on-surface)] backdrop-blur-2xl shadow-[0_8px_24px_rgba(0,0,0,0.35)] border border-[var(--md-sys-color-outline-variant)]/25 flex items-center gap-2.5 cursor-pointer hover:bg-[var(--md-sys-color-surface-container-high)] transition-all group"
           title="Media Controller"
         >
@@ -315,7 +341,10 @@ export const Dock: React.FC = () => {
 
         {/* Capsule 4: Quick Settings & System Status Capsule (100% rounded pill) */}
         <div
-          onClick={() => setShowQuickSettings(!showQuickSettings)}
+          onClick={() => {
+            playClickSound();
+            setShowQuickSettings(!showQuickSettings);
+          }}
           className={`h-15 px-4 rounded-full backdrop-blur-2xl shadow-[0_8px_24px_rgba(0,0,0,0.35)] border transition-all flex items-center gap-3 cursor-pointer ${
             showQuickSettings
               ? 'bg-[var(--md-sys-color-primary-container)] border-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary-container)] shadow-[0_0_20px_var(--md-sys-color-primary)]/40'

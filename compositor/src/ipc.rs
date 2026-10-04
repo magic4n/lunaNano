@@ -351,6 +351,7 @@ async fn handle_connection(
                                 }
                                 if let Ok(updated) = serde_json::from_value::<LunaSettings>(current_val) {
                                     let _ = save_settings(&updated);
+                                    sync_desktop_theme_portal(&updated.appearance.theme_mode, &updated.appearance.custom_accent);
                                     let resp = serde_json::json!({
                                         "type": "settings:updated",
                                         "payload": updated

@@ -1,11 +1,36 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useIpcStore } from '../../stores/ipcStore';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { playNotificationSound, playClickSound } from '../../theme/sounds';
 
 export const NotificationOverlay: React.FC = () => {
   const { notifications, dismissNotification, send } = useIpcStore();
   const { settings } = useSettingsStore();
+  const prevCount = useRef(notifications.length);
+
+  // Play sound on new incoming notification
+  useEffect(() => {
+    if (notifications.length > prevCount.current && !settings.notifications.doNotDisturb) {
+      playNotificationSound();
+    }
+    prevCount.current = notifications.length;
+  }, [notifications.length, settings.notifications.doNotDisturb]);
+
+  // Auto-dismiss timers
+  useEffect(() => {
+    const timeout = settings.notifications.timeoutMs || 5000;
+    const timers = notifications.map((notif) => {
+      return setTimeout(() => {
+        dismissNotification(notif.id);
+        send({ type: 'notifications:dismiss', id: notif.id });
+      }, timeout);
+    });
+
+    return () => {
+      timers.forEach(clearTimeout);
+    };
+  }, [notifications, settings.notifications.timeoutMs, dismissNotification, send]);
 
   if (settings.notifications.doNotDisturb) return null;
 
@@ -41,10 +66,11 @@ export const NotificationOverlay: React.FC = () => {
               </div>
               <button
                 onClick={() => {
+                  playClickSound();
                   dismissNotification(notif.id);
                   send({ type: 'notifications:dismiss', id: notif.id });
                 }}
-                className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-[var(--md-sys-color-outline-variant)]/20 text-[var(--md-sys-color-on-surface-variant)]"
+                className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-[var(--md-sys-color-outline-variant)]/20 text-[var(--md-sys-color-on-surface-variant)] active:scale-95"
               >
                 <span className="material-symbols-outlined text-[14px]">close</span>
               </button>
@@ -59,10 +85,11 @@ export const NotificationOverlay: React.FC = () => {
                   <button
                     key={act.id}
                     onClick={() => {
+                      playClickSound();
                       send({ type: 'notifications:action', id: notif.id, actionId: act.id });
                       dismissNotification(notif.id);
                     }}
-                    className="px-3 py-1 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)]"
+                    className="px-3 py-1 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] active:scale-95 transition-all shadow-sm"
                   >
                     {act.label}
                   </button>

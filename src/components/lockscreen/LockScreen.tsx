@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWindowStore } from '../../stores/windowStore';
 import { useIpcStore } from '../../stores/ipcStore';
+import { playClickSound, playNotificationSound } from '../../theme/sounds';
 
 export const LockScreen: React.FC = () => {
   const { isLockScreenOpen, toggleLockScreen } = useWindowStore();
@@ -24,11 +25,11 @@ export const LockScreen: React.FC = () => {
 
   if (!isLockScreenOpen) return null;
 
-  const handleUnlock = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    // Default PIN: 0000 or any non-empty
-    if (pin === '0000' || pin.length > 0) {
-      send({ type: 'system:unlock', pin });
+  const handleUnlock = (submittedPin?: string) => {
+    const checkPin = submittedPin ?? pin;
+    if (checkPin === '0000' || checkPin.length > 0) {
+      playClickSound();
+      send({ type: 'system:unlock', pin: checkPin });
       toggleLockScreen(false);
       setPin('');
       setError(false);
@@ -38,62 +39,107 @@ export const LockScreen: React.FC = () => {
     }
   };
 
+  const handleNumClick = (digit: string) => {
+    playClickSound();
+    const nextPin = pin + digit;
+    setPin(nextPin);
+    if (nextPin.length >= 4) {
+      setTimeout(() => handleUnlock(nextPin), 150);
+    }
+  };
+
+  const handleBackspace = () => {
+    playClickSound();
+    setPin((p) => p.slice(0, -1));
+  };
+
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0, scale: 1.05 }}
+        initial={{ opacity: 0, scale: 1.04 }}
         animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
+        exit={{ opacity: 0, scale: 0.96 }}
         transition={{ duration: 0.3 }}
-        className="fixed inset-0 z-50 flex flex-col items-center justify-between p-12 bg-black/85 backdrop-blur-3xl text-white select-none"
+        className="fixed inset-0 z-50 flex flex-col items-center justify-between p-10 bg-black/85 backdrop-blur-3xl text-white select-none"
       >
-        {/* Top: Battery info */}
-        <div className="flex items-center gap-2 text-xs font-semibold text-white/70">
-          <span className="material-symbols-outlined text-[18px]">
-            {battery.isCharging ? 'battery_charging_full' : 'battery_full'}
-          </span>
-          <span>{battery.percentage}%</span>
+        {/* Top: Status bar */}
+        <div className="w-full flex items-center justify-between text-xs font-semibold text-white/70 max-w-xl">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px]">lock</span>
+            <span>LunaNano Secure Desktop</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px]">
+              {battery.isCharging ? 'battery_charging_full' : 'battery_full'}
+            </span>
+            <span>{battery.percentage}%</span>
+          </div>
         </div>
 
-        {/* Center: Clock & Password box */}
-        <div className="flex flex-col items-center gap-6">
+        {/* Center: Clock & Keypad */}
+        <div className="flex flex-col items-center gap-5">
           <div className="text-center">
             <h1 className="text-7xl font-extralight tracking-tight font-mono">{time}</h1>
-            <p className="text-sm font-medium text-white/80 mt-2">{date}</p>
+            <p className="text-sm font-medium text-white/80 mt-1">{date}</p>
           </div>
 
           {/* User Avatar */}
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-3xl font-bold shadow-2xl border-2 border-white/20">
-              <span className="material-symbols-outlined text-4xl">person</span>
+          <div className="flex flex-col items-center gap-1.5 mt-2">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-2xl font-bold shadow-2xl border-2 border-white/20">
+              <span className="material-symbols-outlined text-3xl">person</span>
             </div>
-            <span className="text-sm font-bold tracking-wide">User</span>
+            <span className="text-xs font-bold tracking-wide">User</span>
           </div>
 
-          {/* PIN Input */}
-          <form onSubmit={handleUnlock} className="flex flex-col items-center gap-3">
-            <input
-              type="password"
-              autoFocus
-              placeholder="Enter PIN (default: 0000)"
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              className={`w-64 px-4 py-2.5 rounded-full bg-white/10 border text-center text-sm text-white focus:outline-none placeholder-white/40 transition-colors ${
-                error ? 'border-red-500 ring-2 ring-red-500/30' : 'border-white/20 focus:border-white/50'
-              }`}
-            />
+          {/* PIN Dots Display */}
+          <div className="flex items-center gap-3 h-8">
+            {[0, 1, 2, 3].map((idx) => (
+              <span
+                key={idx}
+                className={`w-3.5 h-3.5 rounded-full border border-white/50 transition-all duration-200 ${
+                  pin.length > idx
+                    ? 'bg-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)] scale-110 shadow-[0_0_8px_var(--md-sys-color-primary)]'
+                    : 'bg-transparent'
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Tactile Keypad */}
+          <div className="grid grid-cols-3 gap-3 w-64 mt-2">
+            {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
+              <button
+                key={digit}
+                onClick={() => handleNumClick(digit)}
+                className="w-16 h-16 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-xl font-semibold flex items-center justify-center transition-all mx-auto border border-white/10"
+              >
+                {digit}
+              </button>
+            ))}
             <button
-              type="submit"
-              className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 flex items-center justify-center transition-all"
+              onClick={() => setPin('')}
+              className="w-16 h-16 rounded-full hover:bg-white/10 active:scale-95 text-xs font-bold flex items-center justify-center text-white/70 mx-auto"
             >
-              <span className="material-symbols-outlined text-xl">arrow_forward</span>
+              Clear
             </button>
-          </form>
+            <button
+              onClick={() => handleNumClick('0')}
+              className="w-16 h-16 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-xl font-semibold flex items-center justify-center transition-all mx-auto border border-white/10"
+            >
+              0
+            </button>
+            <button
+              onClick={handleBackspace}
+              className="w-16 h-16 rounded-full hover:bg-white/10 active:scale-95 text-xl flex items-center justify-center text-white/70 mx-auto"
+            >
+              <span className="material-symbols-outlined text-[22px]">backspace</span>
+            </button>
+          </div>
         </div>
 
         {/* Bottom footer hint */}
         <div className="text-xs text-white/40">
-          Press Enter or tap Arrow to Unlock • Super+L to Lock
+          Default PIN: 0000 or any 4 digits • Press Super+L to Lock
         </div>
       </motion.div>
     </AnimatePresence>
