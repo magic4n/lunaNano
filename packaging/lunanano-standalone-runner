@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+"""
+LunaNano Standalone Native Shell Runner
+Renders the LunaNano React Desktop Shell as a fullscreen native Wayland layer window
+using native WebKit2GTK with zero external browser dependency.
+"""
+import sys
+import os
+
+try:
+    import gi
+    gi.require_version('Gtk', '3.0')
+    gi.require_version('WebKit2', '4.1')
+    from gi.repository import Gtk, WebKit2, Gdk
+except ValueError:
+    try:
+        import gi
+        gi.require_version('Gtk', '3.0')
+        gi.require_version('WebKit2', '4.0')
+        from gi.repository import Gtk, WebKit2, Gdk
+    except Exception as e:
+        sys.stderr.write(f"Error loading WebKitGTK: {e}\n")
+        sys.exit(1)
+
+def main():
+    # Target URL: local dist or development server
+    dist_path = os.environ.get("LUNANANO_DIST", "/usr/share/lunanano/dist/index.html")
+    if not os.path.exists(dist_path) and os.path.exists("dist/index.html"):
+        dist_path = os.path.abspath("dist/index.html")
+
+    target_url = f"file://{os.path.abspath(dist_path)}"
+    if len(sys.argv) > 1:
+        target_url = sys.argv[1]
+
+    # Initialize Gtk Window for fullscreen Wayland desktop
+    window = Gtk.Window(type=Gtk.WindowType.TOPLEVEL)
+    window.set_title("LunaNano Desktop Shell")
+    window.set_decorated(False)
+    window.set_app_paintable(True)
+    window.fullscreen()
+
+    # Configure WebKit Settings
+    settings = WebKit2.Settings()
+    settings.set_enable_developer_extras(False)
+    settings.set_enable_webgl(True)
+    settings.set_enable_javascript(True)
+    settings.set_hardware_acceleration_policy(WebKit2.HardwareAccelerationPolicy.ALWAYS)
+    settings.set_allow_file_access_from_file_urls(True)
+    settings.set_allow_universal_access_from_file_urls(True)
+
+    # Enable transparent background for Wayland compositing
+    screen = window.get_screen()
+    visual = screen.get_rgba_visual()
+    if visual and screen.is_composited():
+        window.set_visual(visual)
+
+    webview = WebKit2.WebView.new_with_settings(settings)
+    webview.set_background_color(Gdk.RGBA(0, 0, 0, 0))
+    webview.load_uri(target_url)
+
+    window.add(webview)
+    window.connect("destroy", Gtk.main_quit)
+    window.show_all()
+
+    Gtk.main()
+
+if __name__ == "__main__":
+    main()

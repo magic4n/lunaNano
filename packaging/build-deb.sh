@@ -61,9 +61,15 @@ if [ -f "${ROOT_DIR}/target/release/lunanano-compositor" ]; then
     chmod 755 "${STAGING_DIR}/usr/bin/lunanano-compositor"
 fi
 
+cp "${SCRIPT_DIR}/lunanano-standalone-runner" "${STAGING_DIR}/usr/share/lunanano/"
+chmod 755 "${STAGING_DIR}/usr/share/lunanano/lunanano-standalone-runner"
+
 if [ -f "${ROOT_DIR}/target/release/lunanano-shell" ]; then
     cp "${ROOT_DIR}/target/release/lunanano-shell" "${STAGING_DIR}/usr/bin/"
     chmod 755 "${STAGING_DIR}/usr/bin/lunanano-shell"
+else
+    # Link standalone runner as lunanano-shell if native Tauri binary not compiled on this host
+    ln -sf /usr/share/lunanano/lunanano-standalone-runner "${STAGING_DIR}/usr/bin/lunanano-shell"
 fi
 
 # Session launcher

@@ -26,7 +26,7 @@ export const NotepadApp: React.FC = () => {
       {
         id: 'note-welcome',
         title: 'Welcome to Luna Notes',
-        content: '# LunaNano Notes\n\nA beautiful Material You 3 Markdown editor.\n\n### Features\n- **Live Markdown Preview**\n- Autosave into `~/.local/share/lunanano/notes/`\n- Tag filtering\n- Export to HTML/Markdown\n\n```rust\nfn main() {\n    println!("Hello from LunaNano Wayland shell!");\n}\n```\n',
+        content: '# LunaNano Notes\n\nA beautiful Material You 3 Markdown editor built for the LunaNano Wayland Shell.\n\n### Core Features\n- **Live Markdown Preview** with split view\n- Autosave directly into `~/.local/share/lunanano/notes/`\n- Tag taxonomy and instant search\n- Markdown and HTML export\n\n```rust\nfn main() {\n    println!("LunaNano: standalone Wayland desktop shell");\n}\n```\n\n> Enjoy distraction-free writing in pure Material You 3.\n',
         tag: 'Ideas',
         updatedAt: Date.now(),
       },
@@ -39,10 +39,15 @@ export const NotepadApp: React.FC = () => {
   const [selectedTag, setSelectedTag] = useState<string>('All');
   const [saveStatus, setSaveStatus] = useState<string>('Saved');
 
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const activeNote = notes.find((n) => n.id === activeNoteId) || notes[0];
   const autoSaveTimer = useRef<any>(null);
 
-  // Save notes locally and sync with FS ~/.local/share/lunanano/notes/
+  // Stats calculation
+  const wordCount = activeNote?.content ? activeNote.content.trim().split(/\s+/).filter(Boolean).length : 0;
+  const charCount = activeNote?.content ? activeNote.content.length : 0;
+  const readingTime = Math.ceil(wordCount / 200);
+
   const saveNoteToDisk = (note: Note) => {
     localStorage.setItem('lunanano_notes', JSON.stringify(notes));
     const filename = `${note.title.replace(/[^a-zA-Z0-9_-]/g, '_') || 'untitled'}.md`;
@@ -81,6 +86,24 @@ export const NotepadApp: React.FC = () => {
       n.id === activeNoteId ? { ...n, tag, updatedAt: Date.now() } : n
     );
     setNotes(updated);
+  };
+
+  const insertMarkdown = (prefix: string, suffix: string = '') => {
+    const el = textareaRef.current;
+    if (!el || !activeNote) return;
+
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const text = activeNote.content;
+    const selected = text.substring(start, end);
+    const replacement = `${prefix}${selected}${suffix}`;
+    const nextContent = text.substring(0, start) + replacement + text.substring(end);
+
+    handleContentChange(nextContent);
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + prefix.length, end + prefix.length);
+    }, 10);
   };
 
   const createNewNote = () => {
@@ -149,14 +172,14 @@ export const NotepadApp: React.FC = () => {
           </div>
           <button
             onClick={createNewNote}
-            className="w-8 h-8 rounded-full bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] flex items-center justify-center shadow-md active:scale-95"
+            className="w-8 h-8 rounded-full bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] flex items-center justify-center shadow-md active:scale-95 transition-transform"
             title="New Note"
           >
             <span className="material-symbols-outlined text-[18px]">add</span>
           </button>
         </div>
 
-        {/* Tag filter pills */}
+        {/* Tag filter chips */}
         <div className="px-3 py-2 flex items-center gap-1.5 overflow-x-auto border-b border-[var(--md-sys-color-outline-variant)]/10">
           {TAGS.map((t) => (
             <button
@@ -250,7 +273,7 @@ export const NotepadApp: React.FC = () => {
 
             {/* Save & Export */}
             <div className="flex items-center gap-2">
-              <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">{saveStatus}</span>
+              <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-medium">{saveStatus}</span>
               <button
                 onClick={() => exportNote('md')}
                 className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[var(--md-sys-color-outline-variant)]/20"
@@ -268,10 +291,71 @@ export const NotepadApp: React.FC = () => {
             </div>
           </div>
 
+          {/* Markdown Formatting Toolbar */}
+          <div className="px-3 py-1.5 bg-[var(--md-sys-color-surface-container-high)] border-b border-[var(--md-sys-color-outline-variant)]/20 flex items-center gap-1 text-xs">
+            <button
+              onClick={() => insertMarkdown('**', '**')}
+              className="px-2 py-1 rounded hover:bg-[var(--md-sys-color-outline-variant)]/20 font-bold"
+              title="Bold"
+            >
+              B
+            </button>
+            <button
+              onClick={() => insertMarkdown('*', '*')}
+              className="px-2 py-1 rounded hover:bg-[var(--md-sys-color-outline-variant)]/20 italic font-serif"
+              title="Italic"
+            >
+              I
+            </button>
+            <button
+              onClick={() => insertMarkdown('# ')}
+              className="px-2 py-1 rounded hover:bg-[var(--md-sys-color-outline-variant)]/20 font-bold"
+              title="Heading 1"
+            >
+              H1
+            </button>
+            <button
+              onClick={() => insertMarkdown('## ')}
+              className="px-2 py-1 rounded hover:bg-[var(--md-sys-color-outline-variant)]/20 font-bold"
+              title="Heading 2"
+            >
+              H2
+            </button>
+            <button
+              onClick={() => insertMarkdown('```\n', '\n```')}
+              className="px-2 py-1 rounded hover:bg-[var(--md-sys-color-outline-variant)]/20 font-mono"
+              title="Code Block"
+            >
+              {'</>'}
+            </button>
+            <button
+              onClick={() => insertMarkdown('> ')}
+              className="px-2 py-1 rounded hover:bg-[var(--md-sys-color-outline-variant)]/20"
+              title="Quote"
+            >
+              "
+            </button>
+            <button
+              onClick={() => insertMarkdown('- ')}
+              className="px-2 py-1 rounded hover:bg-[var(--md-sys-color-outline-variant)]/20"
+              title="List"
+            >
+              • List
+            </button>
+            <button
+              onClick={() => insertMarkdown('[', '](https://)')}
+              className="px-2 py-1 rounded hover:bg-[var(--md-sys-color-outline-variant)]/20"
+              title="Link"
+            >
+              🔗 Link
+            </button>
+          </div>
+
           {/* Editor/Preview split pane */}
           <div className="flex-1 flex overflow-hidden">
             {(activeTab === 'edit' || activeTab === 'split') && (
               <textarea
+                ref={textareaRef}
                 value={activeNote.content}
                 onChange={(e) => handleContentChange(e.target.value)}
                 className={`h-full p-4 bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] font-mono text-xs leading-relaxed resize-none focus:outline-none select-text ${
@@ -291,6 +375,20 @@ export const NotepadApp: React.FC = () => {
                 }}
               />
             )}
+          </div>
+
+          {/* Bottom Document Statistics Bar */}
+          <div className="h-6 px-4 bg-[var(--md-sys-color-surface-container-high)] border-t border-[var(--md-sys-color-outline-variant)]/20 flex items-center justify-between text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
+            <div className="flex items-center gap-3">
+              <span>{wordCount} words</span>
+              <span>•</span>
+              <span>{charCount} characters</span>
+              <span>•</span>
+              <span>~{readingTime} min read</span>
+            </div>
+            <div className="text-[10px]">
+              Location: {settings.notepad.storagePath || '~/.local/share/lunanano/notes/'}
+            </div>
           </div>
         </div>
       )}

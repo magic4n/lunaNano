@@ -6,6 +6,7 @@ export const CalculatorApp: React.FC = () => {
   const [memory, setMemory] = useState(0);
   const [history, setHistory] = useState<string[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [scientificMode, setScientificMode] = useState(false);
   const [waitingForOperand, setWaitingForOperand] = useState(false);
   const [prevValue, setPrevValue] = useState<number | null>(null);
   const [operation, setOperation] = useState<string | null>(null);
@@ -72,6 +73,7 @@ export const CalculatorApp: React.FC = () => {
         case '-': result = current - inputValue; break;
         case '×': result = current * inputValue; break;
         case '÷': result = inputValue !== 0 ? current / inputValue : 0; break;
+        case '^': result = Math.pow(current, inputValue); break;
       }
 
       const formattedResult = parseFloat(result.toFixed(8));
@@ -85,6 +87,27 @@ export const CalculatorApp: React.FC = () => {
     setOperation(nextOp);
   };
 
+  const performScientific = (func: string) => {
+    const val = parseFloat(display);
+    let res = 0;
+    switch (func) {
+      case 'sin': res = Math.sin((val * Math.PI) / 180); break;
+      case 'cos': res = Math.cos((val * Math.PI) / 180); break;
+      case 'tan': res = Math.tan((val * Math.PI) / 180); break;
+      case 'sqrt': res = Math.sqrt(val); break;
+      case 'sqr': res = Math.pow(val, 2); break;
+      case 'log': res = Math.log10(val); break;
+      case 'ln': res = Math.log(val); break;
+      case 'pi': res = Math.PI; break;
+      case 'e': res = Math.E; break;
+      case 'inv': res = 1 / val; break;
+    }
+    const formatted = parseFloat(res.toFixed(8));
+    setHistory((prev) => [`${func}(${val}) = ${formatted}`, ...prev.slice(0, 19)]);
+    setDisplay(String(formatted));
+    setWaitingForOperand(true);
+  };
+
   const calculate = () => {
     if (operation === null || prevValue === null) return;
     const inputValue = parseFloat(display);
@@ -95,6 +118,7 @@ export const CalculatorApp: React.FC = () => {
       case '-': result = prevValue - inputValue; break;
       case '×': result = prevValue * inputValue; break;
       case '÷': result = inputValue !== 0 ? prevValue / inputValue : 0; break;
+      case '^': result = Math.pow(prevValue, inputValue); break;
     }
 
     const formattedResult = parseFloat(result.toFixed(8));
@@ -107,7 +131,6 @@ export const CalculatorApp: React.FC = () => {
     setWaitingForOperand(true);
   };
 
-  // Keyboard support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key >= '0' && e.key <= '9') inputDigit(e.key);
@@ -115,6 +138,7 @@ export const CalculatorApp: React.FC = () => {
       else if (e.key === '+' || e.key === '-') performOperation(e.key);
       else if (e.key === '*') performOperation('×');
       else if (e.key === '/') performOperation('÷');
+      else if (e.key === '^') performOperation('^');
       else if (e.key === 'Enter' || e.key === '=') calculate();
       else if (e.key === 'Backspace') deleteDigit();
       else if (e.key === 'Escape') clearAll();
@@ -126,34 +150,61 @@ export const CalculatorApp: React.FC = () => {
 
   return (
     <div className="w-full h-full flex flex-col bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] select-none">
-      {/* Top bar with memory and history toggle */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--md-sys-color-outline-variant)]/20 text-xs text-[var(--md-sys-color-on-surface-variant)]">
+      {/* Top action header */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--md-sys-color-outline-variant)]/20 text-xs text-[var(--md-sys-color-on-surface-variant)] bg-[var(--md-sys-color-surface-container)]">
         <div className="flex items-center gap-1 font-semibold">
-          <button onClick={() => setMemory(0)} className="px-2 py-1 rounded hover:bg-[var(--md-sys-color-outline-variant)]/20">MC</button>
-          <button onClick={() => setDisplay(String(memory))} className="px-2 py-1 rounded hover:bg-[var(--md-sys-color-outline-variant)]/20">MR</button>
-          <button onClick={() => setMemory(memory + parseFloat(display))} className="px-2 py-1 rounded hover:bg-[var(--md-sys-color-outline-variant)]/20">M+</button>
-          <button onClick={() => setMemory(memory - parseFloat(display))} className="px-2 py-1 rounded hover:bg-[var(--md-sys-color-outline-variant)]/20">M-</button>
+          <button onClick={() => setMemory(0)} className="px-2 py-1 rounded-lg hover:bg-[var(--md-sys-color-outline-variant)]/20">MC</button>
+          <button onClick={() => setDisplay(String(memory))} className="px-2 py-1 rounded-lg hover:bg-[var(--md-sys-color-outline-variant)]/20">MR</button>
+          <button onClick={() => setMemory(memory + parseFloat(display))} className="px-2 py-1 rounded-lg hover:bg-[var(--md-sys-color-outline-variant)]/20">M+</button>
+          <button onClick={() => setMemory(memory - parseFloat(display))} className="px-2 py-1 rounded-lg hover:bg-[var(--md-sys-color-outline-variant)]/20">M-</button>
         </div>
-        <button
-          onClick={() => setShowHistory(!showHistory)}
-          className={`px-2 py-1 rounded flex items-center gap-1 hover:bg-[var(--md-sys-color-outline-variant)]/20 ${showHistory ? 'text-[var(--md-sys-color-primary)] font-bold' : ''}`}
-        >
-          <span className="material-symbols-outlined text-[16px]">history</span>
-          <span>History</span>
-        </button>
+
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setScientificMode(!scientificMode)}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+              scientificMode
+                ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-sm'
+                : 'hover:bg-[var(--md-sys-color-outline-variant)]/20'
+            }`}
+          >
+            Scientific
+          </button>
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className={`px-2.5 py-1 rounded-lg flex items-center gap-1 text-xs font-semibold hover:bg-[var(--md-sys-color-outline-variant)]/20 ${
+              showHistory ? 'text-[var(--md-sys-color-primary)] font-bold' : ''
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">history</span>
+            <span>History</span>
+          </button>
+        </div>
       </div>
 
       {showHistory ? (
         <div className="flex-1 p-4 overflow-y-auto space-y-2">
           <div className="flex items-center justify-between pb-2 border-b border-[var(--md-sys-color-outline-variant)]/20">
-            <span className="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Calculation History</span>
-            <button onClick={() => setHistory([])} className="text-xs text-[var(--md-sys-color-error)] hover:underline">Clear</button>
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">
+              Calculation History
+            </span>
+            <button onClick={() => setHistory([])} className="text-xs text-[var(--md-sys-color-error)] hover:underline">
+              Clear All
+            </button>
           </div>
           {history.length === 0 ? (
             <div className="text-center py-12 text-sm text-[var(--md-sys-color-on-surface-variant)]">No calculations yet</div>
           ) : (
             history.map((item, idx) => (
-              <div key={idx} className="p-2 rounded-xl bg-[var(--md-sys-color-surface-container)] text-right font-mono text-sm">
+              <div
+                key={idx}
+                onClick={() => {
+                  const parts = item.split('=');
+                  if (parts[1]) setDisplay(parts[1].trim());
+                  setShowHistory(false);
+                }}
+                className="p-3 rounded-2xl bg-[var(--md-sys-color-surface-container)] text-right font-mono text-sm cursor-pointer hover:bg-[var(--md-sys-color-surface-container-high)] transition-colors"
+              >
                 {item}
               </div>
             ))
@@ -161,43 +212,60 @@ export const CalculatorApp: React.FC = () => {
         </div>
       ) : (
         <>
-          {/* Display */}
-          <div className="px-5 py-4 flex flex-col items-end justify-end flex-1">
+          {/* Output Display */}
+          <div className="px-6 py-4 flex flex-col items-end justify-end flex-1">
             <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] h-5 font-mono">
               {equation}
             </div>
-            <div className="text-4xl font-light font-mono tracking-tight text-[var(--md-sys-color-on-surface)] truncate max-w-full">
+            <div className="text-5xl font-light font-mono tracking-tight text-[var(--md-sys-color-on-surface)] truncate max-w-full">
               {display}
             </div>
           </div>
 
-          {/* Keypad Grid */}
-          <div className="p-3 grid grid-cols-4 gap-2 bg-[var(--md-sys-color-surface-container)] rounded-t-3xl border-t border-[var(--md-sys-color-outline-variant)]/20">
-            <button onClick={clearAll} className="h-12 rounded-full bg-[var(--md-sys-color-error-container)] text-[var(--md-sys-color-on-error-container)] font-semibold active:scale-95 transition-all text-sm">C</button>
-            <button onClick={toggleSign} className="h-12 rounded-full bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] font-semibold active:scale-95 transition-all text-sm">+/-</button>
-            <button onClick={inputPercent} className="h-12 rounded-full bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] font-semibold active:scale-95 transition-all text-sm">%</button>
-            <button onClick={() => performOperation('÷')} className="h-12 rounded-full bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] font-bold active:scale-95 transition-all text-lg">÷</button>
+          {/* Scientific Mode Sub-Panel */}
+          {scientificMode && (
+            <div className="px-3 py-2 grid grid-cols-5 gap-1.5 bg-[var(--md-sys-color-surface-container-high)] border-t border-[var(--md-sys-color-outline-variant)]/20 text-xs font-semibold">
+              <button onClick={() => performScientific('sin')} className="h-9 rounded-xl bg-[var(--md-sys-color-surface)] hover:bg-[var(--md-sys-color-surface-container)] active:scale-95 transition-all">sin</button>
+              <button onClick={() => performScientific('cos')} className="h-9 rounded-xl bg-[var(--md-sys-color-surface)] hover:bg-[var(--md-sys-color-surface-container)] active:scale-95 transition-all">cos</button>
+              <button onClick={() => performScientific('tan')} className="h-9 rounded-xl bg-[var(--md-sys-color-surface)] hover:bg-[var(--md-sys-color-surface-container)] active:scale-95 transition-all">tan</button>
+              <button onClick={() => performScientific('sqrt')} className="h-9 rounded-xl bg-[var(--md-sys-color-surface)] hover:bg-[var(--md-sys-color-surface-container)] active:scale-95 transition-all">√</button>
+              <button onClick={() => performOperation('^')} className="h-9 rounded-xl bg-[var(--md-sys-color-surface)] hover:bg-[var(--md-sys-color-surface-container)] active:scale-95 transition-all">xʸ</button>
 
-            <button onClick={() => inputDigit('7')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg">7</button>
-            <button onClick={() => inputDigit('8')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg">8</button>
-            <button onClick={() => inputDigit('9')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg">9</button>
-            <button onClick={() => performOperation('×')} className="h-12 rounded-full bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] font-bold active:scale-95 transition-all text-lg">×</button>
+              <button onClick={() => performScientific('ln')} className="h-9 rounded-xl bg-[var(--md-sys-color-surface)] hover:bg-[var(--md-sys-color-surface-container)] active:scale-95 transition-all">ln</button>
+              <button onClick={() => performScientific('log')} className="h-9 rounded-xl bg-[var(--md-sys-color-surface)] hover:bg-[var(--md-sys-color-surface-container)] active:scale-95 transition-all">log</button>
+              <button onClick={() => performScientific('pi')} className="h-9 rounded-xl bg-[var(--md-sys-color-surface)] hover:bg-[var(--md-sys-color-surface-container)] active:scale-95 transition-all">π</button>
+              <button onClick={() => performScientific('e')} className="h-9 rounded-xl bg-[var(--md-sys-color-surface)] hover:bg-[var(--md-sys-color-surface-container)] active:scale-95 transition-all">e</button>
+              <button onClick={() => performScientific('inv')} className="h-9 rounded-xl bg-[var(--md-sys-color-surface)] hover:bg-[var(--md-sys-color-surface-container)] active:scale-95 transition-all">1/x</button>
+            </div>
+          )}
 
-            <button onClick={() => inputDigit('4')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg">4</button>
-            <button onClick={() => inputDigit('5')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg">5</button>
-            <button onClick={() => inputDigit('6')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg">6</button>
-            <button onClick={() => performOperation('-')} className="h-12 rounded-full bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] font-bold active:scale-95 transition-all text-lg">−</button>
+          {/* Keypad Grid (M3 Expressive) */}
+          <div className="p-3 grid grid-cols-4 gap-2 bg-[var(--md-sys-color-surface-container)] rounded-t-3xl border-t border-[var(--md-sys-color-outline-variant)]/20 shadow-inner">
+            <button onClick={clearAll} className="h-12 rounded-full bg-[var(--md-sys-color-error-container)] text-[var(--md-sys-color-on-error-container)] font-bold active:scale-95 transition-all text-sm shadow-sm">C</button>
+            <button onClick={toggleSign} className="h-12 rounded-full bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] font-semibold active:scale-95 transition-all text-sm shadow-sm">+/-</button>
+            <button onClick={inputPercent} className="h-12 rounded-full bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] font-semibold active:scale-95 transition-all text-sm shadow-sm">%</button>
+            <button onClick={() => performOperation('÷')} className="h-12 rounded-full bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] font-bold active:scale-95 transition-all text-lg shadow-sm">÷</button>
 
-            <button onClick={() => inputDigit('1')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg">1</button>
-            <button onClick={() => inputDigit('2')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg">2</button>
-            <button onClick={() => inputDigit('3')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg">3</button>
-            <button onClick={() => performOperation('+')} className="h-12 rounded-full bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] font-bold active:scale-95 transition-all text-lg">+</button>
+            <button onClick={() => inputDigit('7')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg shadow-sm">7</button>
+            <button onClick={() => inputDigit('8')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg shadow-sm">8</button>
+            <button onClick={() => inputDigit('9')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg shadow-sm">9</button>
+            <button onClick={() => performOperation('×')} className="h-12 rounded-full bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] font-bold active:scale-95 transition-all text-lg shadow-sm">×</button>
 
-            <button onClick={deleteDigit} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] flex items-center justify-center active:scale-95 transition-all">
+            <button onClick={() => inputDigit('4')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg shadow-sm">4</button>
+            <button onClick={() => inputDigit('5')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg shadow-sm">5</button>
+            <button onClick={() => inputDigit('6')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg shadow-sm">6</button>
+            <button onClick={() => performOperation('-')} className="h-12 rounded-full bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] font-bold active:scale-95 transition-all text-lg shadow-sm">−</button>
+
+            <button onClick={() => inputDigit('1')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg shadow-sm">1</button>
+            <button onClick={() => inputDigit('2')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg shadow-sm">2</button>
+            <button onClick={() => inputDigit('3')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg shadow-sm">3</button>
+            <button onClick={() => performOperation('+')} className="h-12 rounded-full bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] font-bold active:scale-95 transition-all text-lg shadow-sm">+</button>
+
+            <button onClick={deleteDigit} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] flex items-center justify-center active:scale-95 transition-all shadow-sm">
               <span className="material-symbols-outlined text-[20px]">backspace</span>
             </button>
-            <button onClick={() => inputDigit('0')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg">0</button>
-            <button onClick={inputDecimal} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-bold active:scale-95 transition-all text-lg">.</button>
+            <button onClick={() => inputDigit('0')} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-medium active:scale-95 transition-all text-lg shadow-sm">0</button>
+            <button onClick={inputDecimal} className="h-12 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] font-bold active:scale-95 transition-all text-lg shadow-sm">.</button>
             <button onClick={calculate} className="h-12 rounded-full bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] font-bold active:scale-95 transition-all text-xl shadow-md">=</button>
           </div>
         </>

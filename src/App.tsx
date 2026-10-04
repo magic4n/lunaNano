@@ -173,6 +173,48 @@ export const App: React.FC = () => {
       <ScreenshotOverlay />
       <NotificationOverlay />
       <OnScreenKeyboard />
+
+      {/* Screen Rounded Corners Bezel Mask */}
+      {settings.appearance.cornerRadius > 0 && (
+        <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+          <div
+            className="absolute top-0 left-0 bg-black"
+            style={{
+              width: `${settings.appearance.cornerRadius}px`,
+              height: `${settings.appearance.cornerRadius}px`,
+              maskImage: `radial-gradient(circle at 100% 100%, transparent ${settings.appearance.cornerRadius}px, black ${settings.appearance.cornerRadius}px)`,
+              WebkitMaskImage: `radial-gradient(circle at 100% 100%, transparent ${settings.appearance.cornerRadius}px, black ${settings.appearance.cornerRadius}px)`,
+            }}
+          />
+          <div
+            className="absolute top-0 right-0 bg-black"
+            style={{
+              width: `${settings.appearance.cornerRadius}px`,
+              height: `${settings.appearance.cornerRadius}px`,
+              maskImage: `radial-gradient(circle at 0% 100%, transparent ${settings.appearance.cornerRadius}px, black ${settings.appearance.cornerRadius}px)`,
+              WebkitMaskImage: `radial-gradient(circle at 0% 100%, transparent ${settings.appearance.cornerRadius}px, black ${settings.appearance.cornerRadius}px)`,
+            }}
+          />
+          <div
+            className="absolute bottom-0 left-0 bg-black"
+            style={{
+              width: `${settings.appearance.cornerRadius}px`,
+              height: `${settings.appearance.cornerRadius}px`,
+              maskImage: `radial-gradient(circle at 100% 0%, transparent ${settings.appearance.cornerRadius}px, black ${settings.appearance.cornerRadius}px)`,
+              WebkitMaskImage: `radial-gradient(circle at 100% 0%, transparent ${settings.appearance.cornerRadius}px, black ${settings.appearance.cornerRadius}px)`,
+            }}
+          />
+          <div
+            className="absolute bottom-0 right-0 bg-black"
+            style={{
+              width: `${settings.appearance.cornerRadius}px`,
+              height: `${settings.appearance.cornerRadius}px`,
+              maskImage: `radial-gradient(circle at 0% 0%, transparent ${settings.appearance.cornerRadius}px, black ${settings.appearance.cornerRadius}px)`,
+              WebkitMaskImage: `radial-gradient(circle at 0% 0%, transparent ${settings.appearance.cornerRadius}px, black ${settings.appearance.cornerRadius}px)`,
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

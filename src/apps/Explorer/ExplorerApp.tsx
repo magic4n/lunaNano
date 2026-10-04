@@ -45,7 +45,6 @@ export const ExplorerApp: React.FC = () => {
     if (item.isDirectory) {
       loadDirectory(item.path);
     } else if (item.name.endsWith('.zip') || item.name.endsWith('.tar.gz') || item.name.endsWith('.7z')) {
-      // Extract archive
       const opId = `extract-${Date.now()}`;
       onFsProgress(opId, (ev) => {
         setActiveProgress(ev);
@@ -133,6 +132,24 @@ export const ExplorerApp: React.FC = () => {
     }
   };
 
+  const getFileIcon = (item: FsItem) => {
+    if (item.isDirectory) return { icon: 'folder', color: 'text-[var(--md-sys-color-primary)]' };
+    const name = item.name.toLowerCase();
+    if (name.endsWith('.zip') || name.endsWith('.tar.gz') || name.endsWith('.7z') || name.endsWith('.tar')) {
+      return { icon: 'archive', color: 'text-amber-400' };
+    }
+    if (name.endsWith('.rs') || name.endsWith('.ts') || name.endsWith('.tsx') || name.endsWith('.js') || name.endsWith('.py') || name.endsWith('.json')) {
+      return { icon: 'code', color: 'text-cyan-400' };
+    }
+    if (name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.svg') || name.endsWith('.webp')) {
+      return { icon: 'image', color: 'text-emerald-400' };
+    }
+    if (name.endsWith('.md') || name.endsWith('.txt') || name.endsWith('.doc')) {
+      return { icon: 'description', color: 'text-violet-400' };
+    }
+    return { icon: 'draft', color: 'text-[var(--md-sys-color-on-surface-variant)]' };
+  };
+
   const filteredItems = items
     .filter((it) => (showHidden ? true : !it.name.startsWith('.')))
     .filter((it) => it.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -143,14 +160,17 @@ export const ExplorerApp: React.FC = () => {
     { name: 'Downloads', path: '/home/Downloads', icon: 'download' },
     { name: 'Pictures', path: '/home/Pictures', icon: 'image' },
     { name: 'Projects', path: '/home/projects', icon: 'code' },
-    { name: 'Root', path: '/', icon: 'hard_drive' },
+    { name: 'Root System', path: '/', icon: 'hard_drive' },
   ];
+
+  // Breadcrumbs
+  const pathParts = currentPath.split('/').filter(Boolean);
 
   return (
     <div className="w-full h-full flex flex-col bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] select-none">
       {/* Top action & path bar */}
       <div className="p-2 border-b border-[var(--md-sys-color-outline-variant)]/20 flex items-center justify-between gap-3 bg-[var(--md-sys-color-surface-container)]">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <button
             onClick={handleNavigateUp}
             className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[var(--md-sys-color-outline-variant)]/20 active:scale-95"
@@ -167,22 +187,42 @@ export const ExplorerApp: React.FC = () => {
           </button>
         </div>
 
-        {/* Breadcrumb Path Box */}
-        <div className="flex-1 px-3 py-1.5 bg-[var(--md-sys-color-surface)] border border-[var(--md-sys-color-outline-variant)]/30 rounded-xl text-xs font-mono flex items-center gap-1 overflow-x-auto">
-          <span className="material-symbols-outlined text-[16px] text-[var(--md-sys-color-primary)]">folder</span>
-          <span>{currentPath}</span>
+        {/* Interactive Breadcrumb Chips */}
+        <div className="flex-1 px-3 py-1 bg-[var(--md-sys-color-surface)] border border-[var(--md-sys-color-outline-variant)]/30 rounded-xl text-xs font-mono flex items-center gap-1 overflow-x-auto">
+          <button
+            onClick={() => loadDirectory('/')}
+            className="hover:text-[var(--md-sys-color-primary)] font-bold flex items-center"
+          >
+            /
+          </button>
+          {pathParts.map((part, idx) => {
+            const partPath = '/' + pathParts.slice(0, idx + 1).join('/');
+            return (
+              <React.Fragment key={partPath}>
+                <span className="opacity-40">/</span>
+                <button
+                  onClick={() => loadDirectory(partPath)}
+                  className={`hover:text-[var(--md-sys-color-primary)] px-1 py-0.5 rounded ${
+                    idx === pathParts.length - 1 ? 'font-bold text-[var(--md-sys-color-primary)]' : ''
+                  }`}
+                >
+                  {part}
+                </button>
+              </React.Fragment>
+            );
+          })}
         </div>
 
         {/* Search & View Mode */}
         <div className="flex items-center gap-2">
           <div className="relative">
-            <span className="material-symbols-outlined absolute left-2 top-1.5 text-[16px] text-[var(--md-sys-color-on-surface-variant)]">search</span>
+            <span className="material-symbols-outlined absolute left-2.5 top-1.5 text-[16px] text-[var(--md-sys-color-on-surface-variant)]">search</span>
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Filter..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-7 pr-2 py-1 text-xs rounded-xl bg-[var(--md-sys-color-surface)] border border-[var(--md-sys-color-outline-variant)]/30 text-[var(--md-sys-color-on-surface)] w-36 focus:outline-none focus:border-[var(--md-sys-color-primary)]"
+              className="pl-8 pr-2 py-1 text-xs rounded-xl bg-[var(--md-sys-color-surface)] border border-[var(--md-sys-color-outline-variant)]/30 text-[var(--md-sys-color-on-surface)] w-36 focus:outline-none focus:border-[var(--md-sys-color-primary)]"
             />
           </div>
           <button
@@ -204,54 +244,73 @@ export const ExplorerApp: React.FC = () => {
         </div>
       </div>
 
-      {/* Main content body with Bookmarks sidebar + Item view */}
+      {/* Main content body with Sidebar + Item view */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
-        <div className="w-48 p-2 border-r border-[var(--md-sys-color-outline-variant)]/20 bg-[var(--md-sys-color-surface-container)] flex flex-col gap-1 text-xs">
-          <div className="px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">
-            Places
-          </div>
-          {BOOKMARKS.map((bm) => (
-            <button
-              key={bm.path}
-              onClick={() => loadDirectory(bm.path)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left font-medium transition-colors ${
-                currentPath === bm.path
-                  ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)]'
-                  : 'hover:bg-[var(--md-sys-color-outline-variant)]/10 text-[var(--md-sys-color-on-surface)]'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">{bm.icon}</span>
-              <span>{bm.name}</span>
-            </button>
-          ))}
+        <div className="w-52 p-2.5 border-r border-[var(--md-sys-color-outline-variant)]/20 bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between text-xs">
+          <div className="space-y-1">
+            <div className="px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">
+              Places
+            </div>
+            {BOOKMARKS.map((bm) => (
+              <button
+                key={bm.path}
+                onClick={() => loadDirectory(bm.path)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left font-medium transition-colors ${
+                  currentPath === bm.path
+                    ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] font-semibold'
+                    : 'hover:bg-[var(--md-sys-color-outline-variant)]/10 text-[var(--md-sys-color-on-surface)]'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[18px] text-[var(--md-sys-color-primary)]">{bm.icon}</span>
+                <span>{bm.name}</span>
+              </button>
+            ))}
 
-          <div className="mt-4 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">
-            Actions
-          </div>
-          <button
-            onClick={() => { setShowNewDialog('folder'); setDialogInput(''); }}
-            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-[var(--md-sys-color-outline-variant)]/10 text-left"
-          >
-            <span className="material-symbols-outlined text-[18px]">create_new_folder</span>
-            <span>New Folder</span>
-          </button>
-          <button
-            onClick={() => { setShowNewDialog('file'); setDialogInput(''); }}
-            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-[var(--md-sys-color-outline-variant)]/10 text-left"
-          >
-            <span className="material-symbols-outlined text-[18px]">note_add</span>
-            <span>New File</span>
-          </button>
-          {clipboard && (
+            <div className="pt-3 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">
+              Actions
+            </div>
             <button
-              onClick={handlePaste}
-              className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--md-sys-color-primary)]/10 text-[var(--md-sys-color-primary)] font-semibold text-left mt-2"
+              onClick={() => { setShowNewDialog('folder'); setDialogInput(''); }}
+              className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-[var(--md-sys-color-outline-variant)]/10 text-left font-medium"
             >
-              <span className="material-symbols-outlined text-[18px]">content_paste</span>
-              <span>Paste {clipboard.item.name}</span>
+              <span className="material-symbols-outlined text-[18px] text-[var(--md-sys-color-primary)]">create_new_folder</span>
+              <span>New Folder</span>
             </button>
-          )}
+            <button
+              onClick={() => { setShowNewDialog('file'); setDialogInput(''); }}
+              className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-[var(--md-sys-color-outline-variant)]/10 text-left font-medium"
+            >
+              <span className="material-symbols-outlined text-[18px] text-[var(--md-sys-color-primary)]">note_add</span>
+              <span>New File</span>
+            </button>
+            {clipboard && (
+              <button
+                onClick={handlePaste}
+                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--md-sys-color-primary)]/15 text-[var(--md-sys-color-primary)] font-semibold text-left mt-2"
+              >
+                <span className="material-symbols-outlined text-[18px]">content_paste</span>
+                <span className="truncate">Paste ({clipboard.item.name})</span>
+              </button>
+            )}
+          </div>
+
+          {/* Storage Capacity Indicator Card */}
+          <div className="p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]/20 flex flex-col gap-1.5">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="font-bold flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px] text-[var(--md-sys-color-primary)]">hard_drive</span>
+                Storage
+              </span>
+              <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)]">64% free</span>
+            </div>
+            <div className="w-full bg-[var(--md-sys-color-surface)] h-1.5 rounded-full overflow-hidden">
+              <div className="bg-[var(--md-sys-color-primary)] h-full w-[36%]" />
+            </div>
+            <div className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] truncate">
+              Root File System (Linux ext4)
+            </div>
+          </div>
         </div>
 
         {/* Files View Area */}
@@ -269,7 +328,7 @@ export const ExplorerApp: React.FC = () => {
             <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3">
               {filteredItems.map((item) => {
                 const isSelected = selectedItem?.path === item.path;
-                const isArchive = item.name.endsWith('.zip') || item.name.endsWith('.tar.gz') || item.name.endsWith('.7z');
+                const fileMeta = getFileIcon(item);
                 return (
                   <div
                     key={item.path}
@@ -277,12 +336,12 @@ export const ExplorerApp: React.FC = () => {
                     onDoubleClick={() => handleItemDoubleClick(item)}
                     className={`flex flex-col items-center p-3 rounded-2xl cursor-pointer text-center group transition-all ${
                       isSelected
-                        ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] shadow-md'
+                        ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] shadow-md ring-1 ring-[var(--md-sys-color-primary)]'
                         : 'hover:bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface)]'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-4xl mb-1 text-[var(--md-sys-color-primary)] group-hover:scale-105 transition-transform">
-                      {item.isDirectory ? 'folder' : isArchive ? 'archive' : 'draft'}
+                    <span className={`material-symbols-outlined text-4xl mb-1 ${fileMeta.color} group-hover:scale-105 transition-transform`}>
+                      {fileMeta.icon}
                     </span>
                     <span className="text-xs font-medium truncate w-full" title={item.name}>
                       {item.name}
@@ -295,6 +354,7 @@ export const ExplorerApp: React.FC = () => {
             <div className="space-y-1">
               {filteredItems.map((item) => {
                 const isSelected = selectedItem?.path === item.path;
+                const fileMeta = getFileIcon(item);
                 return (
                   <div
                     key={item.path}
@@ -302,13 +362,13 @@ export const ExplorerApp: React.FC = () => {
                     onDoubleClick={() => handleItemDoubleClick(item)}
                     className={`flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer text-xs transition-colors ${
                       isSelected
-                        ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)]'
+                        ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] font-semibold shadow-sm'
                         : 'hover:bg-[var(--md-sys-color-surface-container)]'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 truncate">
-                      <span className="material-symbols-outlined text-[18px] text-[var(--md-sys-color-primary)]">
-                        {item.isDirectory ? 'folder' : 'draft'}
+                      <span className={`material-symbols-outlined text-[18px] ${fileMeta.color}`}>
+                        {fileMeta.icon}
                       </span>
                       <span className="font-medium truncate">{item.name}</span>
                     </div>
@@ -324,47 +384,47 @@ export const ExplorerApp: React.FC = () => {
       </div>
 
       {/* Selected Item Action Bar at bottom */}
-      {selectedItem && (
-        <div className="px-4 py-2 bg-[var(--md-sys-color-surface-container-high)] border-t border-[var(--md-sys-color-outline-variant)]/20 flex items-center justify-between text-xs">
-          <div className="font-semibold text-[var(--md-sys-color-on-surface)] truncate max-w-sm">
-            {selectedItem.name}
-          </div>
+      <div className="px-4 py-2 bg-[var(--md-sys-color-surface-container-high)] border-t border-[var(--md-sys-color-outline-variant)]/20 flex items-center justify-between text-xs">
+        <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
+          {filteredItems.length} items {selectedItem ? `• Selected: ${selectedItem.name}` : ''}
+        </div>
+        {selectedItem && (
           <div className="flex items-center gap-2">
             <button
               onClick={() => setClipboard({ op: 'copy', item: selectedItem })}
-              className="px-2.5 py-1 rounded-lg hover:bg-[var(--md-sys-color-outline-variant)]/20 flex items-center gap-1"
+              className="px-2.5 py-1 rounded-lg hover:bg-[var(--md-sys-color-outline-variant)]/20 flex items-center gap-1 font-semibold"
             >
               <span className="material-symbols-outlined text-[16px]">content_copy</span>
               <span>Copy</span>
             </button>
             <button
               onClick={() => setClipboard({ op: 'cut', item: selectedItem })}
-              className="px-2.5 py-1 rounded-lg hover:bg-[var(--md-sys-color-outline-variant)]/20 flex items-center gap-1"
+              className="px-2.5 py-1 rounded-lg hover:bg-[var(--md-sys-color-outline-variant)]/20 flex items-center gap-1 font-semibold"
             >
               <span className="material-symbols-outlined text-[16px]">content_cut</span>
               <span>Cut</span>
             </button>
             <button
               onClick={() => { setShowNewDialog('compress'); setDialogInput(selectedItem.name.replace(/\.[^/.]+$/, '')); }}
-              className="px-2.5 py-1 rounded-lg hover:bg-[var(--md-sys-color-outline-variant)]/20 flex items-center gap-1"
+              className="px-2.5 py-1 rounded-lg hover:bg-[var(--md-sys-color-outline-variant)]/20 flex items-center gap-1 font-semibold"
             >
               <span className="material-symbols-outlined text-[16px]">archive</span>
               <span>Compress 7z/Zip</span>
             </button>
             <button
               onClick={() => handleDelete(selectedItem)}
-              className="px-2.5 py-1 rounded-lg hover:bg-[var(--md-sys-color-error)]/10 text-[var(--md-sys-color-error)] flex items-center gap-1"
+              className="px-2.5 py-1 rounded-lg hover:bg-[var(--md-sys-color-error)]/15 text-[var(--md-sys-color-error)] flex items-center gap-1 font-semibold"
             >
               <span className="material-symbols-outlined text-[16px]">delete</span>
               <span>Delete</span>
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* M3 Progress Dialog (Archive unpack / pack / copy) */}
       {activeProgress && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] rounded-3xl p-6 w-96 shadow-2xl border border-[var(--md-sys-color-outline-variant)]/30">
             <div className="flex items-center gap-3 mb-4">
               <span className="material-symbols-outlined text-3xl text-[var(--md-sys-color-primary)]">
@@ -395,7 +455,7 @@ export const ExplorerApp: React.FC = () => {
 
       {/* New Folder/File/Compress Dialog */}
       {showNewDialog && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] rounded-3xl p-6 w-80 shadow-2xl border border-[var(--md-sys-color-outline-variant)]/30">
             <h3 className="text-sm font-bold mb-3 capitalize">
               {showNewDialog === 'compress' ? 'Create Archive' : `New ${showNewDialog}`}

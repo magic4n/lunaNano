@@ -4,6 +4,7 @@ import { useWindowStore } from '../../stores/windowStore';
 import { useIpcStore } from '../../stores/ipcStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { DockContextMenu, DockContextMenuItem } from './DockContextMenu';
+import { QuickSettingsPanel } from './QuickSettingsPanel';
 
 interface DockItemProps {
   appId: string;
@@ -36,16 +37,20 @@ const DockCapsuleItem: React.FC<DockItemProps> = ({
   const isFocused = appWindows.some((w) => w.id === activeWindowId && !w.isMinimized);
   const notifCount = notifications.filter((n) => n.appName.toLowerCase().includes(appId.toLowerCase())).length;
 
-  // Magnification calculation
+  // Gaussian-style magnification curve
   const distance = useTransform(mouseX, (val: number) => {
     const bounds = ref.current?.getBoundingClientRect() ?? { x: 0, width: 0 };
     return val - bounds.x - bounds.width / 2;
   });
 
-  const baseSize = settings.dock.iconSize || 52;
+  const baseSize = settings.dock.iconSize || 54;
   const maxPower = settings.dock.magnificationPower || 1.35;
-  const widthSync = useTransform(distance, [-120, 0, 120], [baseSize, baseSize * maxPower, baseSize]);
-  const width = useSpring(widthSync, { mass: 0.1, stiffness: 350, damping: 25 });
+  const widthSync = useTransform(
+    distance,
+    [-130, -60, 0, 60, 130],
+    [baseSize, baseSize * (1 + (maxPower - 1) * 0.5), baseSize * maxPower, baseSize * (1 + (maxPower - 1) * 0.5), baseSize]
+  );
+  const width = useSpring(widthSync, { mass: 0.1, stiffness: 380, damping: 24 });
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -75,7 +80,7 @@ const DockCapsuleItem: React.FC<DockItemProps> = ({
   };
 
   const handleAuxClick = (e: React.MouseEvent) => {
-    // Middle click = new window
+    // Middle click = new instance
     if (e.button === 1) {
       e.preventDefault();
       openApp(appId, undefined, undefined, { newInstance: true });
@@ -140,20 +145,20 @@ const DockCapsuleItem: React.FC<DockItemProps> = ({
           const dragged = e.dataTransfer?.getData('text/plain');
           if (dragged && onReorder) onReorder(dragged, appId);
         }}
-        whileTap={{ scale: 0.92 }}
-        className="relative flex items-center justify-center rounded-full bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface)] shadow-lg hover:shadow-2xl border border-[var(--md-sys-color-outline-variant)]/20 cursor-pointer overflow-hidden backdrop-blur-md transition-shadow"
+        whileTap={{ scale: 0.90 }}
+        className="relative flex items-center justify-center rounded-full bg-[var(--md-sys-color-surface-container)]/95 text-[var(--md-sys-color-on-surface)] shadow-[0_8px_20px_rgba(0,0,0,0.35)] hover:shadow-[0_12px_28px_rgba(0,0,0,0.5)] border border-[var(--md-sys-color-outline-variant)]/30 cursor-pointer overflow-hidden backdrop-blur-2xl transition-all"
       >
-        <span className="material-symbols-outlined text-[28px] select-none pointer-events-none transition-transform group-hover:scale-110">
+        <span className="material-symbols-outlined text-[28px] select-none pointer-events-none transition-transform duration-200 group-hover:scale-110 text-[var(--md-sys-color-primary)]">
           {icon}
         </span>
 
-        {/* Running dot indicator */}
+        {/* Running dot/pill indicator */}
         {isRunning && (
           <span
-            className={`absolute bottom-1 w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+            className={`absolute bottom-1.5 rounded-full transition-all duration-300 ${
               isFocused
-                ? 'w-3 bg-[var(--md-sys-color-primary)] shadow-[0_0_8px_var(--md-sys-color-primary)]'
-                : 'bg-[var(--md-sys-color-on-surface-variant)]/60'
+                ? 'w-3.5 h-1.5 bg-[var(--md-sys-color-primary)] shadow-[0_0_10px_var(--md-sys-color-primary)]'
+                : 'w-1.5 h-1.5 bg-[var(--md-sys-color-on-surface-variant)]/70'
             }`}
           />
         )}
@@ -166,8 +171,8 @@ const DockCapsuleItem: React.FC<DockItemProps> = ({
         )}
       </motion.div>
 
-      {/* Tooltip on hover */}
-      <div className="absolute -top-9 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface)] text-[11px] font-medium px-2.5 py-1 rounded-full shadow-lg border border-[var(--md-sys-color-outline-variant)]/30 whitespace-nowrap z-40">
+      {/* Floating Tooltip with M3 chip styling */}
+      <div className="absolute -top-10 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-150 transform group-hover:-translate-y-1 bg-[var(--md-sys-color-surface-container-highest)]/95 text-[var(--md-sys-color-on-surface)] text-[11px] font-semibold px-3 py-1 rounded-full shadow-xl border border-[var(--md-sys-color-outline-variant)]/35 whitespace-nowrap z-50 backdrop-blur-lg">
         {name}
       </div>
 
@@ -190,7 +195,9 @@ export const Dock: React.FC = () => {
   const { audio, battery, network, send } = useIpcStore();
 
   const [currentTime, setCurrentTime] = useState('');
-  const [showVolumePopup, setShowVolumePopup] = useState(false);
+  const [currentDate, setCurrentDate] = useState('');
+  const [showQuickSettings, setShowQuickSettings] = useState(false);
+  const [isPlayingMedia, setIsPlayingMedia] = useState(false);
 
   useEffect(() => {
     const updateTime = () => {
@@ -200,6 +207,13 @@ export const Dock: React.FC = () => {
           hour: '2-digit',
           minute: '2-digit',
           hour12: !settings.dateTime.format24h,
+        })
+      );
+      setCurrentDate(
+        now.toLocaleDateString([], {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
         })
       );
     };
@@ -233,103 +247,113 @@ export const Dock: React.FC = () => {
   };
 
   return (
-    <div
-      onMouseMove={(e) => mouseX.set(e.pageX)}
-      onMouseLeave={() => mouseX.set(Infinity)}
-      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 select-none"
-    >
-      {/* Capsule 1: Launcher Capsule */}
-      <motion.div
-        whileTap={{ scale: 0.94 }}
-        onClick={() => toggleLauncher()}
-        className={`h-14 px-4 rounded-full flex items-center justify-center cursor-pointer shadow-xl backdrop-blur-xl border border-[var(--md-sys-color-outline-variant)]/25 transition-all duration-300 ${
-          isLauncherOpen
-            ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)]'
-            : 'bg-[var(--md-sys-color-surface-container)]/90 text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-container-high)]'
-        }`}
+    <>
+      <div
+        onMouseMove={(e) => mouseX.set(e.pageX)}
+        onMouseLeave={() => mouseX.set(Infinity)}
+        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 select-none"
       >
-        <span className="material-symbols-outlined text-[26px]">grid_view</span>
-      </motion.div>
-
-      {/* Capsule 2: App Icons Capsule */}
-      <div className="h-16 px-3 rounded-full bg-[var(--md-sys-color-surface-container)]/85 backdrop-blur-2xl shadow-2xl border border-[var(--md-sys-color-outline-variant)]/20 flex items-center gap-2">
-        {pinned.map((appId) => {
-          if (appId === 'launcher') return null;
-          const meta = APP_CATALOG[appId] || { name: appId, icon: 'apps' };
-          return (
-            <DockCapsuleItem
-              key={appId}
-              appId={appId}
-              name={meta.name}
-              icon={meta.icon}
-              mouseX={mouseX}
-              isPinned={true}
-              onReorder={handleReorder}
-            />
-          );
-        })}
-      </div>
-
-      {/* Capsule 3: System Status & Volume Capsule */}
-      <div className="relative">
-        <div
-          onClick={() => setShowVolumePopup(!showVolumePopup)}
-          className="h-14 px-4 rounded-full bg-[var(--md-sys-color-surface-container)]/90 text-[var(--md-sys-color-on-surface)] backdrop-blur-xl shadow-xl border border-[var(--md-sys-color-outline-variant)]/25 flex items-center gap-3 cursor-pointer hover:bg-[var(--md-sys-color-surface-container-high)] transition-colors"
+        {/* Capsule 1: Launcher Capsule (100% rounded pill) */}
+        <motion.div
+          whileTap={{ scale: 0.92 }}
+          onClick={() => toggleLauncher()}
+          title="App Launcher (Super)"
+          className={`h-15 w-15 px-4 rounded-full flex items-center justify-center cursor-pointer shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-2xl border border-[var(--md-sys-color-outline-variant)]/30 transition-all duration-300 ${
+            isLauncherOpen
+              ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-[0_0_20px_var(--md-sys-color-primary)]/50'
+              : 'bg-[var(--md-sys-color-surface-container)]/90 text-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)]'
+          }`}
         >
-          {/* Audio icon */}
-          <span className="material-symbols-outlined text-[20px] text-[var(--md-sys-color-on-surface-variant)]">
+          <span className="material-symbols-outlined text-[26px]">grid_view</span>
+        </motion.div>
+
+        {/* Capsule 2: App Icons Capsule (100% rounded pill container) */}
+        <div className="h-17 px-3.5 rounded-full bg-[var(--md-sys-color-surface-container)]/85 backdrop-blur-3xl shadow-[0_12px_32px_rgba(0,0,0,0.45)] border border-[var(--md-sys-color-outline-variant)]/25 flex items-center gap-2.5">
+          {pinned.map((appId) => {
+            if (appId === 'launcher') return null;
+            const meta = APP_CATALOG[appId] || { name: appId, icon: 'apps' };
+            return (
+              <DockCapsuleItem
+                key={appId}
+                appId={appId}
+                name={meta.name}
+                icon={meta.icon}
+                mouseX={mouseX}
+                isPinned={true}
+                onReorder={handleReorder}
+              />
+            );
+          })}
+        </div>
+
+        {/* Capsule 3: Media Player Capsule (100% rounded pill) */}
+        <div
+          onClick={() => setIsPlayingMedia(!isPlayingMedia)}
+          className="h-15 px-4 rounded-full bg-[var(--md-sys-color-surface-container)]/90 text-[var(--md-sys-color-on-surface)] backdrop-blur-2xl shadow-[0_8px_24px_rgba(0,0,0,0.35)] border border-[var(--md-sys-color-outline-variant)]/25 flex items-center gap-2.5 cursor-pointer hover:bg-[var(--md-sys-color-surface-container-high)] transition-all group"
+          title="Media Controller"
+        >
+          {/* Animated sound wave bars */}
+          <div className="flex items-end gap-0.5 h-4">
+            <span className={`w-0.5 bg-[var(--md-sys-color-primary)] rounded-full transition-all duration-300 ${isPlayingMedia ? 'h-3.5 animate-pulse' : 'h-1.5'}`} />
+            <span className={`w-0.5 bg-[var(--md-sys-color-primary)] rounded-full transition-all duration-300 ${isPlayingMedia ? 'h-4 animate-bounce' : 'h-2.5'}`} />
+            <span className={`w-0.5 bg-[var(--md-sys-color-primary)] rounded-full transition-all duration-300 ${isPlayingMedia ? 'h-2 animate-pulse' : 'h-1'}`} />
+          </div>
+
+          <div className="flex flex-col justify-center min-w-0 max-w-[90px]">
+            <span className="text-[11px] font-bold leading-tight truncate">
+              {isPlayingMedia ? 'Playing' : 'Media'}
+            </span>
+            <span className="text-[9px] text-[var(--md-sys-color-on-surface-variant)] truncate">
+              {isPlayingMedia ? 'PipeWire Stream' : 'Idle'}
+            </span>
+          </div>
+
+          <span className="material-symbols-outlined text-[18px] text-[var(--md-sys-color-primary)] group-hover:scale-110 transition-transform">
+            {isPlayingMedia ? 'pause_circle' : 'play_circle'}
+          </span>
+        </div>
+
+        {/* Capsule 4: Quick Settings & System Status Capsule (100% rounded pill) */}
+        <div
+          onClick={() => setShowQuickSettings(!showQuickSettings)}
+          className={`h-15 px-4 rounded-full backdrop-blur-2xl shadow-[0_8px_24px_rgba(0,0,0,0.35)] border transition-all flex items-center gap-3 cursor-pointer ${
+            showQuickSettings
+              ? 'bg-[var(--md-sys-color-primary-container)] border-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary-container)] shadow-[0_0_20px_var(--md-sys-color-primary)]/40'
+              : 'bg-[var(--md-sys-color-surface-container)]/90 text-[var(--md-sys-color-on-surface)] border-[var(--md-sys-color-outline-variant)]/25 hover:bg-[var(--md-sys-color-surface-container-high)]'
+          }`}
+          title="Quick Settings & System Status"
+        >
+          {/* Audio */}
+          <span className="material-symbols-outlined text-[19px] text-[var(--md-sys-color-primary)]">
             {audio.isMuted ? 'volume_off' : audio.volume < 30 ? 'volume_mute' : audio.volume < 70 ? 'volume_down' : 'volume_up'}
           </span>
 
-          {/* Network icon */}
-          <span className="material-symbols-outlined text-[20px] text-[var(--md-sys-color-on-surface-variant)]">
+          {/* Network */}
+          <span className="material-symbols-outlined text-[19px] text-[var(--md-sys-color-primary)]">
             {network.type === 'wifi' ? (network.connected ? 'wifi' : 'wifi_off') : 'lan'}
           </span>
 
           {/* Battery */}
-          <div className="flex items-center gap-1 text-xs font-semibold text-[var(--md-sys-color-on-surface)]">
-            <span className="material-symbols-outlined text-[18px]">
+          <div className="flex items-center gap-1 text-xs font-bold">
+            <span className="material-symbols-outlined text-[18px] text-[var(--md-sys-color-primary)]">
               {battery.isCharging ? 'battery_charging_full' : battery.percentage > 80 ? 'battery_full' : battery.percentage > 30 ? 'battery_5_bar' : 'battery_1_bar'}
             </span>
             <span>{battery.percentage}%</span>
           </div>
 
-          {/* Clock */}
-          <div className="pl-1 border-l border-[var(--md-sys-color-outline-variant)]/30 text-xs font-bold tracking-wide">
-            {currentTime}
+          {/* Clock & Date */}
+          <div className="pl-1.5 border-l border-[var(--md-sys-color-outline-variant)]/30 flex flex-col justify-center">
+            <span className="text-xs font-bold tracking-tight leading-none">{currentTime}</span>
+            <span className="text-[9px] text-[var(--md-sys-color-on-surface-variant)] leading-tight mt-0.5">{currentDate}</span>
           </div>
         </div>
-
-        {/* Quick Volume Slider Popover */}
-        {showVolumePopup && (
-          <div className="absolute bottom-16 right-0 w-64 bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] p-4 rounded-3xl shadow-2xl border border-[var(--md-sys-color-outline-variant)]/30 backdrop-blur-2xl z-50">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">
-                Master Volume
-              </span>
-              <span className="text-xs font-bold">{audio.volume}%</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => send({ type: 'system:toggle-mute' })}
-                className="p-2 rounded-full hover:bg-[var(--md-sys-color-outline-variant)]/20 text-[var(--md-sys-color-primary)]"
-              >
-                <span className="material-symbols-outlined text-[20px]">
-                  {audio.isMuted ? 'volume_off' : 'volume_up'}
-                </span>
-              </button>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={audio.volume}
-                onChange={(e) => send({ type: 'system:set-volume', volume: Number(e.target.value) })}
-                className="w-full accent-[var(--md-sys-color-primary)] cursor-pointer"
-              />
-            </div>
-          </div>
-        )}
       </div>
-    </div>
+
+      {/* Quick Settings Panel Overlay */}
+      <QuickSettingsPanel
+        isOpen={showQuickSettings}
+        onClose={() => setShowQuickSettings(false)}
+      />
+    </>
   );
 };

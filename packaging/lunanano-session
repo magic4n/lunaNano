@@ -11,7 +11,10 @@ export GDK_BACKEND=wayland,x11
 export CLUTTER_BACKEND=wayland
 export _JAVA_AWT_WM_NONREPARENTING=1
 
-echo "Starting LunaNano Wayland Desktop Shell..."
+echo "=========================================================="
+echo " Starting LunaNano Standalone Wayland Desktop Shell"
+echo " Complete independent environment (No browser required)"
+echo "=========================================================="
 
 # 1. Start Wayland Compositor in background
 lunanano-compositor --port 4242 &
@@ -20,12 +23,16 @@ COMPOSITOR_PID=$!
 # Trap signals to cleanly shutdown
 cleanup() {
     echo "Stopping LunaNano Desktop Shell..."
+    if [ -n "$SHELL_PID" ]; then
+        kill "$SHELL_PID" 2>/dev/null || true
+    fi
     kill "$COMPOSITOR_PID" 2>/dev/null || true
     exit 0
 }
 trap cleanup SIGINT SIGTERM EXIT
 
 # 2. Wait for compositor IPC WebSocket to become ready
+echo "Waiting for LunaNano compositor IPC socket..."
 for i in {1..30}; do
     if nc -z 127.0.0.1 4242 2>/dev/null || (exec 3<>/dev/tcp/127.0.0.1/4242) 2>/dev/null; then
         echo "LunaNano Compositor IPC ready on port 4242."
@@ -34,16 +41,24 @@ for i in {1..30}; do
     sleep 0.1
 done
 
-# 3. Start React Layer-Shell Webview
+# 3. Start Standalone React Desktop Shell (Tauri / Native WebKitGTK Layer-Shell)
+# This provides the fullscreen native user interface with zero external browser dependency.
 if command -v lunanano-shell >/dev/null 2>&1; then
+    echo "Launching native LunaNano Shell binary..."
     lunanano-shell &
     SHELL_PID=$!
-elif command -v chromium >/dev/null 2>&1; then
-    chromium --app="http://127.0.0.1:5173" --kiosk --enable-features=UseOzonePlatform --ozone-platform=wayland &
+elif [ -x /usr/share/lunanano/lunanano-standalone-runner ]; then
+    echo "Launching native WebKitGTK standalone shell runner..."
+    /usr/share/lunanano/lunanano-standalone-runner &
     SHELL_PID=$!
-elif command -v google-chrome >/dev/null 2>&1; then
-    google-chrome --app="http://127.0.0.1:5173" --kiosk --enable-features=UseOzonePlatform --ozone-platform=wayland &
+elif [ -x ./packaging/lunanano-standalone-runner ]; then
+    echo "Launching local standalone shell runner..."
+    ./packaging/lunanano-standalone-runner &
     SHELL_PID=$!
+else
+    echo "Error: LunaNano native shell binary not found."
+    echo "Please ensure lunanano-shell or lunanano package is installed."
+    exit 1
 fi
 
 # Wait on Compositor

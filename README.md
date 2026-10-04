@@ -1,77 +1,95 @@
 # LunaNano 🌙
 
-> **Ultra-lightweight aesthetic Wayland Desktop Shell built with React, TypeScript & Material You 3, powered by a high-performance Rust compositor with XWayland support.**
+> **Ultra-lightweight aesthetic Standalone Wayland Desktop Shell built with React, TypeScript & Material You 3, powered by a high-performance Rust compositor with XWayland support.**
 
 ---
 
 ## 🌟 Overview
 
-**LunaNano** is a complete, standalone desktop environment designed as a modern, minimalist alternative to GNOME and KDE. The user interacts exclusively with a fullscreen React-powered interface without native legacy desktop panels.
+**LunaNano** is a 100% standalone, fullscreen desktop environment designed as a complete replacement for GNOME, KDE, or Hyprland.
 
-- **Frontend Shell**: Fullscreen React 18 + Vite + TypeScript application running via Tauri / layer-shell.
-- **Wayland Compositor**: High-performance Rust compositor built on wlroots / Smithay protocols with native **XWayland** support for seamless X11 compatibility.
-- **True Material You 3 (M3)**: Built using official `@material/web` components and `@material/material-color-utilities` dynamic palette generation extracted from wallpaper, synced to GTK4 and Qt apps via `org.freedesktop.portal.Settings`.
-- **Bidirectional WebSocket IPC**: Ultra-low latency event and command bus (`127.0.0.1:4242`) connecting the compositor and React shell.
+**Important**: LunaNano does **NOT** run inside a web browser and requires **zero** external browsers (no Chrome, Chromium, or Firefox needed). Upon starting the session, the user is greeted by a dedicated native fullscreen shell surface running directly over the Wayland compositor display server.
+
+- **Standalone Frontend Shell**: Native fullscreen shell binary (`lunanano-shell`) rendering React 18 + Vite + TypeScript directly onto Wayland layer surfaces using native WebKitGTK / Tauri without external browser processes.
+- **Wayland Compositor**: High-performance Rust compositor built with wlroots / Smithay protocols with native **XWayland** support for seamless X11 application compatibility.
+- **True Material You 3 (M3 Expressive)**: Built using official `@material/web` components and `@material/material-color-utilities` dynamic palette generation extracted from wallpaper, synchronized to GTK4 and Qt apps via `org.freedesktop.portal.Settings`.
+- **Bidirectional WebSocket IPC**: Ultra-low latency event and command bus (`127.0.0.1:4242`) connecting the Rust compositor and React shell.
 - **Embedded PTY Engine**: Real interactive terminal sessions powered by `portable-pty` and `xterm.js`.
-- **Foreign Toplevel Management**: External applications (such as Chromium, LibreOffice, GIMP) run as native Wayland/X11 toplevels while window decorations, titlebars, and controls are rendered in the React layer.
+- **Foreign Toplevel Management**: External applications run as native Wayland/X11 toplevels while window decorations, titlebars, and controls are rendered in the React layer.
 
 ---
 
-## 🚀 Key Features
+## 🚀 Key Features & Architecture
 
-### 🖥️ Bottom Dock (Pill Capsules)
-- **Modular Floating Capsules**: 100% pill-rounded containers with frosted glass blur and M3 elevations.
-- **Hover Magnification**: macOS-inspired scaling with spring physics (`framer-motion`).
-- **Genie Window Animation**: Windows collapse smoothly into their dock icon capsule upon minimization.
-- **Interactive Badges**: Running dot indicators, unread notification counter badges, and operation progress rings.
-- **Mouse Controls**:
+### 🖥️ Bottom Dock (100% Pill Capsules)
+- **Modular Floating Capsules**: Completely rounded pill capsules with frosted glass blur, acrylic mica highlights, and M3 elevations.
+- **macOS Gaussian Magnification**: Smooth bell-curve hover magnification powered by `framer-motion` spring physics.
+- **Genie Window Animation**: Windows collapse and morph smoothly into their respective dock capsules upon minimization.
+- **Badges & Progress**: Running dot indicators, unread notification counter badges, and archive operation progress indicators.
+- **Media Player Capsule**: Real-time equalizer visualizer, track title marquee, and play/pause controls.
+- **Quick Settings & Status Capsule**: Combined capsule displaying Wi-Fi, Bluetooth, PipeWire volume, battery status, and clock/date.
+- **Interactive Mouse Controls**:
   - **LMB**: Open / Minimize / Focus.
-  - **RMB**: Context menu (New Window, Pin/Unpin, Close, Info).
+  - **RMB**: Context menu (New Window, Pin/Unpin, Close All).
   - **MMB (Middle Click)**: Spawn new application instance.
-  - **Scroll Wheel**: Cycle between windows of the same application.
-  - **Drag & Drop**: Reorder dock capsules dynamically.
-- **Integrated System Capsule**: Master audio slider, Wi-Fi status, battery percentage, and 12/24h clock.
+  - **Scroll Wheel**: Switch between open windows of the same app.
+  - **Drag & Drop**: Reorder dock capsules smoothly.
+
+---
+
+### 🎛️ Material You Quick Settings Control Center
+Clicking the system capsule opens the slide-up Quick Settings panel:
+- **Large Interactive M3 Pills**: Wi-Fi, Bluetooth, Dark/Light Mode, Do Not Disturb, Screenshot, and Night Light.
+- **PipeWire Volume Slider**: Master volume control with mute toggle.
+- **Screen Brightness Slider**: Hardware monitor backlight control (`brightnessctl`).
+- **Power Profiles & Battery Health**: Performance, Balanced, and Power Saver (Eco) chips with CPU and RAM usage meters.
+- **User & Session Actions**: Lock screen, full system settings, and power controls.
 
 ---
 
 ### 📦 Built-in React Applications
-All internal applications run inside the shell's routing canvas:
+
 1. **Terminal**:
-   - `xterm.js` with `FitAddon` and `WebLinksAddon`.
-   - Connected to Rust `portable-pty` over WebSocket.
-   - Customizable fonts, themes, opacity, and cursor styles.
+   - Multi-tab support (`+` new tab, close tab) for concurrent PTY sessions.
+   - Connected directly to Rust `portable-pty` over WebSocket.
+   - Integrated action bar: font scaling (`A-` / `A+`), clear screen, and command clipboard.
+   - Status bar: active shell path (`/bin/bash`), geometry (cols × rows), and live PTY connection dot.
 2. **Calculator**:
-   - Standard arithmetic, percentage, inversion, and memory functions (`MC`, `MR`, `M+`, `M-`).
-   - Calculation history drawer.
-   - Full keyboard navigation.
+   - Standard and Scientific mode drawer (sin, cos, tan, √, xʸ, ln, log, π, e, 1/x).
+   - Calculation history tape with recall, memory registers (`MC`, `MR`, `M+`, `M-`).
+   - Tactile Material You pill keypad with haptic feedback.
 3. **File Explorer**:
-   - Real filesystem operations via native IPC bridge.
-   - Path breadcrumbs, search, grid and list views, bookmarks sidebar.
-   - File manipulation: copy, cut, paste, rename, delete.
-   - Archive extraction and compression for `.zip`, `.tar.gz`, and `.7z` with M3 progress dialogs.
+   - Real Linux filesystem operations via native IPC bridge.
+   - Interactive breadcrumb navigation (click any path segment to jump).
+   - Storage capacity meter in sidebar (used/free ext4 disk space).
+   - Rich file type badges (code, archives, images, documents).
+   - High-speed archive compression and extraction for `.zip`, `.tar.gz`, and `.7z` with real-time M3 progress dialogs.
 4. **Notepad**:
-   - Split-pane and full-preview Markdown editor powered by `marked`.
-   - Autosave to `~/.local/share/lunanano/notes/`.
-   - Tag filtering, search, and Markdown / HTML exports.
-5. **Settings**:
-   - Complete settings suite covering all 21 system categories: Appearance, Dock, Workspaces, Default Apps, Terminal, Calculator, File Explorer, Notepad, Notifications, Sound (PipeWire / WirePlumber mixer), Network (Wi-Fi `nmcli` & Bluetooth `bluetoothctl`), Power (`powerprofilesctl`), Date & Time (NTP), Keyboard Layouts, Multi-User, Privacy & Permissions, Updates, Keybindings, Accessibility (High Contrast, Large Text, Screen Reader, On-Screen Keyboard), About System, and Profile Export/Import (`~/.config/lunanano/settings.json`) with hot reload.
+   - Split-pane and live-preview Markdown editor powered by `marked`.
+   - Markdown formatting toolbar: Bold, Italic, Headings, Code block, Quote, List, Links.
+   - Live document statistics: Word count, character count, and estimated reading time.
+   - Automatic background saving into `~/.local/share/lunanano/notes/`.
+   - Tag taxonomy and export to `.md` or `.html`.
+5. **Settings (All 21 Sections)**:
+   - **Appearance**: Live dynamic wallpaper gallery with MCU color extraction, custom wallpaper URL/gradient, dark/light/auto mode, UI scale slider, screen corner radius, smooth animations, and UI sound effects.
+   - **Dock, Workspaces, Default Apps, Terminal, Calculator, Explorer, Notepad, Notifications, Sound (PipeWire per-app mixer), Network (Wi-Fi & BT), Power, Date & Time (NTP), Keyboards, Users, Privacy, Updates, Shortcuts, Accessibility, About, and Profile Backup/Reset**.
 6. **Launcher**:
-   - Fullscreen app launcher overlay with fuzzy search and category filtering.
+   - Fullscreen app launcher overlay with fuzzy search and categorized freedesktop `.desktop` applications.
 
 ---
 
-### 🌐 System Integrations
+### 🌐 Standalone Hardware Integration
 - **Audio**: PipeWire & WirePlumber master volume and per-app streams.
-- **Brightness**: `brightnessctl` per-monitor brightness control.
-- **Networking**: `nmcli` Wi-Fi scanning and connection manager.
-- **Bluetooth**: `bluetoothctl` pairing, connection, and Obex file transfers.
+- **Brightness**: `brightnessctl` backlight control.
+- **Networking**: `nmcli` Wi-Fi scanning and connection.
+- **Bluetooth**: `bluetoothctl` pairing and device management.
 - **Power**: `power-profiles-daemon` (`power-saver`, `balanced`, `performance`).
 - **Notifications**: Mako / D-Bus notification daemon with React toast overlay.
 - **Clipboard**: `wl-clipboard` (`wl-copy`, `wl-paste`) with history manager.
 - **Captures**: `grim` + `slurp` for screenshots and `wf-recorder` for video recording.
 - **Lock Screen**: React lock screen (Super+L) with clock, battery, and PIN unlock.
-- **Greeter**: `greetd` login manager session.
-- **Accessibility**: Built-in On-Screen Virtual Keyboard, high-contrast, and large-text toggles.
+- **Greeter**: `greetd` login session.
+- **Accessibility**: Built-in On-Screen Virtual Keyboard, high-contrast mode, and large text.
 
 ---
 
@@ -87,86 +105,39 @@ All internal applications run inside the shell's routing canvas:
 | `Super + M` | Minimize Active Window |
 | `Super + Up` | Maximize / Snap Top |
 | `Super + Down` | Minimize Active Window |
-| `Super + Left` | Snap Window Left (Half Screen) |
-| `Super + Right` | Snap Window Right (Half Screen) |
+| `Super + Left` | Snap Window Left (50% screen) |
+| `Super + Right` | Snap Window Right (50% screen) |
 | `Alt + Tab` | Window Switcher Carousel |
 
 ---
 
-## 🛠️ Installation & Building
-
-### Requirements
-- Linux (Ubuntu 24.04, Debian 12+, Arch Linux, or Fedora)
-- Rust 1.75+ (`rustc`, `cargo`)
-- Node.js 18+ and `npm`
-- Wayland libraries: `libwayland-dev`, `wayland-protocols`, `libxkbcommon-dev`, `xwayland`
-- Desktop utilities: `pipewire`, `wireplumber`, `brightnessctl`, `network-manager`, `bluez`, `power-profiles-daemon`, `wl-clipboard`, `grim`, `slurp`, `wf-recorder`
-
----
+## 🛠️ Installation & Setup
 
 ### Install from Debian Package (.deb)
-Download the `.deb` package from [Releases](https://github.com/superluna/lunaNano/releases) or build it locally:
+
+LunaNano installs as a standalone display session:
 
 ```bash
 sudo dpkg -i artifacts/lunanano_0.1.0_amd64.deb
 sudo apt-get install -f
 ```
 
----
+### Running LunaNano
 
-### Building from Source
+#### 1. From Display Manager (GDM, SDDM, greetd, LightDM)
+Select **LunaNano** from the session list on your login screen.
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/superluna/lunaNano.git
-   cd lunaNano
-   ```
-
-2. **Install frontend dependencies & build bundle**:
-   ```bash
-   npm ci
-   npm run build
-   ```
-
-3. **Build the Rust Compositor**:
-   ```bash
-   cargo build --release -p lunanano-compositor
-   ```
-
-4. **Package the `.deb` file**:
-   ```bash
-   ./packaging/build-deb.sh
-   ```
-   The generated package will be saved in `artifacts/lunanano_0.1.0_<arch>.deb`.
-
----
-
-## 🚀 Running LunaNano
-
-### 1. As a Display Manager Session (GDM, SDDM, greetd, LightDM)
-Select **LunaNano** from the session menu on your login screen.
-
-### 2. From Virtual Console (TTY)
+#### 2. From Virtual Console (TTY)
 ```bash
 lunanano-session
 ```
-
-### 3. Development / Nested Mode
-You can test the shell inside an existing Wayland or X11 session:
-```bash
-# Terminal 1: Run Compositor
-cargo run --release -p lunanano-compositor
-
-# Terminal 2: Run React Shell
-npm run dev
-```
-Open `http://localhost:5173` in your browser or run Chromium in kiosk mode.
+The session initializes the Rust compositor, starts the IPC server on port `4242`, and immediately launches the standalone native shell on the screen.
 
 ---
 
-## ⚙️ Configuration
+## ⚙️ Configuration Format
 
-Configuration is stored in `~/.config/lunanano/settings.json`. The compositor watches this file using `notify` and automatically hot-reloads configuration changes across all connected shell clients without restarting the session.
+Settings are saved in `~/.config/lunanano/settings.json`. The compositor monitors this file and hot-reloads changes dynamically across the shell without requiring a restart.
 
 ---
 
