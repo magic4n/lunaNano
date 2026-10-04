@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -e
+
+# Export Wayland session environment variables
+export XDG_CURRENT_DESKTOP=LunaNano
+export XDG_SESSION_TYPE=wayland
+export XDG_SESSION_DESKTOP=LunaNano
+export MOZ_ENABLE_WAYLAND=1
+export QT_QPA_PLATFORM=wayland;xcb
+export GDK_BACKEND=wayland,x11
+export CLUTTER_BACKEND=wayland
+export _JAVA_AWT_WM_NONREPARENTING=1
+
+echo "Starting LunaNano Wayland Desktop Shell..."
+
+# 1. Start Wayland Compositor in background
+lunanano-compositor --port 4242 &
+COMPOSITOR_PID=$!
+
+# Trap signals to cleanly shutdown
+cleanup() {
+    echo "Stopping LunaNano Desktop Shell..."
+    kill "$COMPOSITOR_PID" 2>/dev/null || true
+    exit 0
+}
+trap cleanup SIGINT SIGTERM EXIT
+
+# 2. Wait for compositor IPC WebSocket to become ready
+for i in {1..30}; do
+    if nc -z 127.0.0.1 4242 2>/dev/null || (exec 3<>/dev/tcp/127.0.0.1/4242) 2>/dev/null; then
+        echo "LunaNano Compositor IPC ready on port 4242."
+        break
+    fi
+    sleep 0.1
+done
+
+# 3. Start React Layer-Shell Webview
+if command -v lunanano-shell >/dev/null 2>&1; then
+    lunanano-shell &
+    SHELL_PID=$!
+elif command -v chromium >/dev/null 2>&1; then
+    chromium --app="http://127.0.0.1:5173" --kiosk --enable-features=UseOzonePlatform --ozone-platform=wayland &
+    SHELL_PID=$!
+elif command -v google-chrome >/dev/null 2>&1; then
+    google-chrome --app="http://127.0.0.1:5173" --kiosk --enable-features=UseOzonePlatform --ozone-platform=wayland &
+    SHELL_PID=$!
+fi
+
+# Wait on Compositor
+wait "$COMPOSITOR_PID"

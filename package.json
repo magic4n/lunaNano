@@ -7,8 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "bridge": "node bridge/server.js",
-    "start": "node bridge/runner.js"
+    "build:compositor": "cargo build --release -p lunanano-compositor",
+    "build:deb": "./packaging/build-deb.sh",
+    "build:all": "npm run build && npm run build:compositor && npm run build:deb"
   },
   "keywords": [
     "wayland",

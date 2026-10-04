@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=LunaNano
+Comment=Pure Wayland desktop shell powered by React & Material You 3
+Exec=/usr/bin/lunanano-session
+Type=Application
+DesktopNames=LunaNano;wlroots
+Icon=lunanano
+Keywords=wayland;compositor;shell;react;material-you;

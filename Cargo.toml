@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "compositor",
+    "src-tauri"
+]
+resolver = "2"
