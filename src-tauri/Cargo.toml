@@ -3,6 +3,7 @@ name = "lunanano-shell"
 version = "0.1.0"
 description = "LunaNano Desktop Shell Tauri Layer-Shell Wrapper"
 authors = ["superLuna Ecosystem"]
+license = "GPL-3.0-or-later"
 edition = "2021"
 
 [build-dependencies]

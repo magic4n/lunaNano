@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["superLuna Ecosystem"]
 description = "LunaNano Wayland Compositor & System Bridge"
+license = "GPL-3.0-or-later"
 
 [dependencies]
 tokio = { version = "1.37", features = ["full"] }

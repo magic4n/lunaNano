@@ -22,7 +22,7 @@
     "sway"
   ],
   "author": "superLuna Ecosystem",
-  "license": "MIT",
+  "license": "GPL-3.0-or-later",
   "dependencies": {
     "@material/material-color-utilities": "^0.4.0",
     "@material/web": "^2.5.0",
