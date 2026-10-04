@@ -6,6 +6,8 @@
 
 <p align="center">
   <strong>Сверхлегкая эстетичная автономная десктоп-оболочка для Wayland на React, TypeScript и Material You 3, работающая на высокопроизводительном Rust-композиторе с поддержкой XWayland.</strong>
+
+Пожалуйста, устанавливайте Nightly версии только на Виртуальных Машинах.
 </p>
 
 <p align="center">
