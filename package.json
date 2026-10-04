@@ -1,0 +1,56 @@
+{
+  "name": "lunanano",
+  "version": "0.1.0",
+  "description": "LunaNano — Ultra-lightweight aesthetic Wayland Desktop Shell built with React, TypeScript & Tailwind CSS for superLuna ecosystem",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "bridge": "node bridge/server.js",
+    "start": "node bridge/runner.js"
+  },
+  "keywords": [
+    "wayland",
+    "shell",
+    "react",
+    "desktop-environment",
+    "superluna",
+    "layer-shell",
+    "hyprland",
+    "sway"
+  ],
+  "author": "superLuna Ecosystem",
+  "license": "MIT",
+  "dependencies": {
+    "@material/material-color-utilities": "^0.4.0",
+    "@material/web": "^2.5.0",
+    "@types/canvas-confetti": "^1.9.0",
+    "canvas-confetti": "^1.9.4",
+    "clsx": "^2.1.1",
+    "framer-motion": "^14.0.0",
+    "lucide-react": "^0.383.0",
+    "marked": "^18.0.14",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^2.3.0",
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0",
+    "xterm-addon-web-links": "^0.9.0",
+    "zustand": "^4.5.2"
+  },
+  "devDependencies": {
+    "@types/marked": "^5.0.2",
+    "@types/node": "^20.11.5",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/ws": "^8.5.10",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.17",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11",
+    "ws": "^8.16.0"
+  }
+}
